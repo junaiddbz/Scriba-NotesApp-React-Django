@@ -90,7 +90,7 @@ DATABASES = {
 if DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql':
     DATABASES['default']['CONN_MAX_AGE'] = env.int('DB_CONN_MAX_AGE', default=60)
     DATABASES['default'].setdefault('OPTIONS', {})
-    DATABASES['default']['OPTIONS'].setdefault('sslmode', env('DB_SSLMODE', default='require'))
+    DATABASES['default']['OPTIONS'].setdefault('sslmode', env('DB_SSLMODE', default='prefer'))
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
