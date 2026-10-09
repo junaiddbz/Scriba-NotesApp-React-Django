@@ -16,7 +16,7 @@ Scriba is a modern, collaborative note-taking application designed to keep your 
 
 ---
 
-## ✨ Features
+## Features
 
 - **Rich Markdown Editor:** Focus on writing with a beautiful, zero-latency editor that supports quick markdown formatting.
 - **Workspaces & Organization:** Organize your notes into logical workspaces and folders. Drag, drop, and structure your thoughts intuitively.
@@ -26,7 +26,7 @@ Scriba is a modern, collaborative note-taking application designed to keep your 
 - **History & Trash:** Never lose a thought. Access note versions, and recover accidentally deleted notes from the Trash.
 - **Secure Authentication:** JWT-based authentication with support for OAuth (Google & GitHub).
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 **Frontend:**
 - React 18
@@ -42,7 +42,7 @@ Scriba is a modern, collaborative note-taking application designed to keep your 
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -117,7 +117,7 @@ Your app should now be running on [http://localhost:3000](http://localhost:3000)
 
 ---
 
-## 🏗️ Docker / Production Deployment
+## Docker / Production Deployment
 
 Scriba comes with a fully configured `docker-compose.yml` and `nginx.conf` for seamless production deployment. 
 
@@ -128,7 +128,7 @@ docker-compose up -d --build
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions, issues, and feature requests are welcome! 
 Feel free to check the [issues page](https://github.com/junaiddbz/Notes-App/issues).
@@ -141,7 +141,7 @@ Feel free to check the [issues page](https://github.com/junaiddbz/Notes-App/issu
 
 ---
 
-## 📄 License
+## License
 
 This project is open-source and available under the [MIT License](LICENSE).
 
