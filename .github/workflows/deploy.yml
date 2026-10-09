@@ -106,9 +106,8 @@ jobs:
 
     steps:
       - name: Send Slack notification
-        uses: slackapi/slack-github-action@v1
+        uses: slackapi/slack-github-action@v1.24.0
         with:
-          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
           payload: |
             {
               "text": "Deployment Status",
@@ -122,3 +121,6 @@ jobs:
                 }
               ]
             }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
