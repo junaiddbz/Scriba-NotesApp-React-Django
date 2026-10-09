@@ -31,13 +31,21 @@ export const useWorkspacesStore = create((set, get) => ({
       const response = await workspacesAPI.getById(id);
       set({ currentWorkspace: response.data, isLoading: false });
 
-      // Fetch folders for this workspace
-      await get().fetchFolders(id);
 
       return response.data;
     } catch (error) {
       const errorMessage = error.response?.data?.detail || 'Failed to fetch workspace';
       set({ error: errorMessage, isLoading: false });
+      throw error;
+    }
+  },
+
+  fetchActivities: async (id) => {
+    try {
+      const response = await workspacesAPI.getActivities(id);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch workspace activities', error);
       throw error;
     }
   },
@@ -101,37 +109,29 @@ export const useWorkspacesStore = create((set, get) => ({
     }
   },
 
-  fetchFolders: async (workspaceId) => {
-    try {
-      const response = await workspacesAPI.getFolders(workspaceId);
-      set({ folders: response.data });
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
-  },
-
-  createFolder: async (workspaceId, data) => {
+  fetchTree: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await workspacesAPI.createFolder(workspaceId, data);
-      const { folders } = get();
-      set({ folders: [response.data, ...folders], isLoading: false });
+      const response = await workspacesAPI.getTree();
+      set({ isLoading: false });
       return response.data;
     } catch (error) {
-      const errorMessage = error.response?.data?.detail || 'Failed to create folder';
+      const errorMessage = error.response?.data?.detail || 'Failed to fetch workspace tree';
       set({ error: errorMessage, isLoading: false });
       throw error;
     }
   },
 
-  moveNote: async (workspaceId, noteId, folderId) => {
+  moveWorkspace: async (id, parentId) => {
     set({ isLoading: true, error: null });
     try {
-      await workspacesAPI.moveNote(workspaceId, noteId, folderId);
+      const response = await workspacesAPI.move(id, parentId);
+      // Optional: Refresh workspaces after move
+      await get().fetchWorkspaces();
       set({ isLoading: false });
+      return response.data;
     } catch (error) {
-      const errorMessage = error.response?.data?.detail || 'Failed to move note';
+      const errorMessage = error.response?.data?.detail || 'Failed to move workspace';
       set({ error: errorMessage, isLoading: false });
       throw error;
     }

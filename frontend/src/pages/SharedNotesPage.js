@@ -7,6 +7,7 @@ import {
   FiFilter,
   FiEdit3,
   FiEye,
+  FiEyeOff,
   FiTrash2,
   FiArrowLeft,
   FiCalendar,
@@ -32,7 +33,8 @@ const SharedNotesPage = () => {
     fetchSharedWithMe,
     fetchMyShares,
     updatePermission,
-    removeShare
+    removeShare,
+    toggleHideShare
   } = useSharingStore();
 
   const [activeTab, setActiveTab] = useState('shared-with-me'); // 'shared-with-me' or 'my-shares'
@@ -54,10 +56,14 @@ const SharedNotesPage = () => {
 
   // Filter data based on search and filter
   const filteredData = (Array.isArray(currentData) ? currentData : []).filter((item) => {
-    const matchesSearch =
-      item.note?.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.note?.body?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.shared_with_email?.toLowerCase().includes(searchQuery.toLowerCase());
+    const query = searchQuery.toLowerCase();
+    
+    // Safety check for search string
+    const matchesSearch = !query ||
+      (item.note?.title && item.note.title.toLowerCase().includes(query)) ||
+      (item.note?.body && item.note.body.toLowerCase().includes(query)) ||
+      (item.shared_with?.email && item.shared_with.email.toLowerCase().includes(query)) ||
+      (item.shared_by?.email && item.shared_by.email.toLowerCase().includes(query));
 
     const matchesFilter =
       filterBy === 'all' ||
@@ -91,6 +97,15 @@ const SharedNotesPage = () => {
     } catch (error) {
       console.error('Remove share error:', error);
       toast.error('Failed to remove share');
+    }
+  };
+
+  const handleToggleHide = async (shareId) => {
+    try {
+      await toggleHideShare(shareId);
+      toast.success('Visibility toggled successfully');
+    } catch (error) {
+      console.error('Toggle hide error:', error);
     }
   };
 
@@ -247,7 +262,8 @@ const SharedNotesPage = () => {
                 type={activeTab}
                 onPermissionChange={() => openPermissionModal(share)}
                 onRemove={() => handleRemoveShare(share.id, activeTab)}
-                onViewNote={() => navigate(`/note/${share.note?.id}`)}
+                onToggleHide={() => handleToggleHide(share.id)}
+                onViewNote={() => navigate(`/note/${share.note?.id}`, { state: { fromShared: true } })}
                 getPermissionIcon={getPermissionIcon}
                 getPermissionColor={getPermissionColor}
               />
@@ -278,6 +294,7 @@ const SharedNoteItem = ({
   type,
   onPermissionChange,
   onRemove,
+  onToggleHide,
   onViewNote,
   getPermissionIcon,
   getPermissionColor
@@ -302,12 +319,12 @@ const SharedNoteItem = ({
               {type === 'shared-with-me' ? (
                 <div className="flex items-center gap-1">
                   <FiUser size={12} />
-                  <span>Shared by {share.shared_by_name || share.shared_by_email}</span>
+                  <span>Shared by {share.shared_by?.first_name || share.shared_by?.username || share.shared_by?.email}</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-1">
                   <FiMail size={12} />
-                  <span>Shared with {share.shared_with_email}</span>
+                  <span>Shared with {share.shared_with?.first_name || share.shared_with?.username || share.shared_with?.email}</span>
                 </div>
               )}
 
@@ -332,25 +349,36 @@ const SharedNoteItem = ({
 
       {/* Actions */}
       <div className="flex gap-2">
-        {type === 'my-shares' && (
+        {type === 'shared-with-me' && (
           <button
-            onClick={onPermissionChange}
-            className="p-2 hover:bg-gray-700 rounded-lg transition-colors text-gray-400 hover:text-white"
-            title="Change permission"
-            aria-label="Change permission"
+            onClick={(e) => { e.stopPropagation(); onToggleHide(); }}
+            className={`p-2 rounded-lg transition-colors ${share.is_hidden ? 'text-orange-400 hover:bg-orange-500/20' : 'text-gray-400 hover:text-white hover:bg-gray-700'}`}
+            title={share.is_hidden ? "Unhide from general notes" : "Hide from general notes"}
+            aria-label="Toggle visibility"
           >
-            <FiSettings size={16} />
+            {share.is_hidden ? <FiEyeOff size={16} /> : <FiEye size={16} />}
           </button>
         )}
-
-        <button
-          onClick={onRemove}
-          className="p-2 hover:bg-red-900/20 rounded-lg transition-colors text-red-400"
-          title={type === 'my-shares' ? 'Stop sharing' : 'Remove access'}
-          aria-label={type === 'my-shares' ? 'Stop sharing' : 'Remove access'}
-        >
-          <FiTrash2 size={16} />
-        </button>
+        {type === 'my-shares' && (
+          <>
+            <button
+              onClick={onPermissionChange}
+              className="p-2 hover:bg-gray-700 rounded-lg transition-colors text-gray-400 hover:text-white"
+              title="Change permission"
+              aria-label="Change permission"
+            >
+              <FiSettings size={16} />
+            </button>
+            <button
+              onClick={onRemove}
+              className="p-2 hover:bg-red-900/20 rounded-lg transition-colors text-red-400"
+              title="Stop sharing"
+              aria-label="Stop sharing"
+            >
+              <FiTrash2 size={16} />
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -358,23 +386,23 @@ const SharedNoteItem = ({
 
 // Permission Modal Component
 const PermissionModal = ({ share, onUpdatePermission, onClose, isLoading }) => {
-  const [selectedPermission, setSelectedPermission] = useState(share.permission_level || 'VIEWER');
+  const [selectedPermission, setSelectedPermission] = useState(share.permission_level || 'viewer');
 
   const permissions = [
     {
-      value: 'VIEWER',
+      value: 'viewer',
       label: 'Viewer',
       description: 'Can view the note but cannot edit',
       icon: <FiEye className="text-blue-400" size={20} />
     },
     {
-      value: 'EDITOR',
+      value: 'editor',
       label: 'Editor',
       description: 'Can view and edit the note content',
       icon: <FiEdit3 className="text-green-400" size={20} />
     },
     {
-      value: 'ADMIN',
+      value: 'admin',
       label: 'Admin',
       description: 'Full access including sharing and deletion',
       icon: <FaCrown className="text-orange-400" size={20} />
@@ -401,7 +429,7 @@ const PermissionModal = ({ share, onUpdatePermission, onClose, isLoading }) => {
 
         <div className="mb-4">
           <p className="text-sm text-gray-400 mb-2">
-            Changing permission for <strong className="text-white">{share.shared_with_email}</strong>
+            Changing permission for <strong className="text-white">{share.shared_with?.email || 'this user'}</strong>
           </p>
           <p className="text-sm text-gray-500">
             Note: <span className="text-gray-300">{share.note?.title || 'Untitled Note'}</span>

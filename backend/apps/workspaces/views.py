@@ -2,6 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from django.db.models import Q
 
 from apps.notes.models import Workspace, Note
 from .serializers import WorkspaceSerializer, WorkspaceTreeSerializer
@@ -17,12 +18,30 @@ class WorkspaceViewSet(viewsets.ModelViewSet):
     serializer_class = WorkspaceSerializer
     
     def get_queryset(self):
-        """Only show workspaces belonging to the authenticated user."""
-        return Workspace.objects.filter(user=self.request.user)
+        """Only show workspaces belonging to the authenticated user or shared with them."""
+        return Workspace.objects.filter(
+            Q(user=self.request.user) |
+            Q(shares__shared_with=self.request.user, shares__is_active=True)
+        ).distinct()
     
     def perform_create(self, serializer):
         """Set the current user as the workspace owner."""
-        serializer.save(user=self.request.user)
+        workspace = serializer.save(user=self.request.user)
+        from apps.notes.models import WorkspaceActivity
+        WorkspaceActivity.log(workspace, self.request.user, 'Created workspace')
+
+    def perform_update(self, serializer):
+        old_workspace = self.get_object()
+        old_name = old_workspace.name
+        old_desc = old_workspace.description
+        
+        workspace = serializer.save()
+        from apps.notes.models import WorkspaceActivity
+        
+        if old_name != workspace.name:
+            WorkspaceActivity.log(workspace, self.request.user, 'Changed workspace name', {'old': old_name, 'new': workspace.name})
+        if old_desc != workspace.description:
+            WorkspaceActivity.log(workspace, self.request.user, 'Changed workspace description', {'old': old_desc, 'new': workspace.description})
     
     def perform_destroy(self, instance):
         """
@@ -48,8 +67,24 @@ class WorkspaceViewSet(viewsets.ModelViewSet):
         GET /api/v1/workspaces/tree/
         """
         # Get only root workspaces (no parent)
-        root_workspaces = Workspace.objects.filter(user=request.user, parent_workspace__isnull=True)
+        root_workspaces = Workspace.objects.filter(
+            Q(user=request.user) |
+            Q(shares__shared_with=request.user, shares__is_active=True),
+            parent_workspace__isnull=True
+        ).distinct()
         serializer = WorkspaceTreeSerializer(root_workspaces, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['get'])
+    def activities(self, request, pk=None):
+        """
+        Get recent activities for this workspace.
+        GET /api/v1/workspaces/{id}/activities/
+        """
+        workspace = self.get_object()
+        activities = workspace.activities.all()[:50]
+        from .serializers import WorkspaceActivitySerializer
+        serializer = WorkspaceActivitySerializer(activities, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
     @action(detail=True, methods=['post'])
@@ -69,7 +104,7 @@ class WorkspaceViewSet(viewsets.ModelViewSet):
                 parent = Workspace.objects.get(id=parent_id, user=request.user)
                 
                 # Check for circular reference
-                if self._is_descendant(parent, workspace):
+                if self._is_descendant(workspace, parent):
                     return Response(
                         {'detail': 'Cannot move workspace to its own child.'},
                         status=status.HTTP_400_BAD_REQUEST

@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
+from django.db.models import Q
 
 from .models import Note, NoteVersion, MediaAttachment, NoteLink, Workspace
 from .serializers import (
@@ -30,8 +31,15 @@ class NoteViewSet(viewsets.ModelViewSet):
     ordering = ['-updated_at']
     
     def get_queryset(self):
-        """Only show notes belonging to the authenticated user."""
-        return Note.objects.filter(user=self.request.user, is_deleted=False)
+        """Only show notes belonging to the authenticated user or shared with them (directly or via workspace)."""
+        qs = Note.objects.filter(
+            Q(user=self.request.user) |
+            Q(shares__shared_with=self.request.user, shares__is_active=True) |
+            Q(workspace__shares__shared_with=self.request.user, workspace__shares__is_active=True)
+        ).distinct()
+        if getattr(self, 'action', '') != 'restore':
+            qs = qs.filter(is_deleted=False)
+        return qs
     
     def get_serializer_class(self):
         """Use different serializers for list vs detail views."""
@@ -43,11 +51,34 @@ class NoteViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         """Set the current user as the note owner."""
-        serializer.save(user=self.request.user, last_edited_by=self.request.user)
+        note = serializer.save(user=self.request.user, last_edited_by=self.request.user)
+        from apps.notes.models import WorkspaceActivity
+        if note.workspace:
+            WorkspaceActivity.log(note.workspace, self.request.user, 'Created a note', {'title': note.title, 'note_id': note.id})
     
     def perform_update(self, serializer):
         """Track who last edited the note and trigger version snapshot."""
+        old_note = self.get_object()
+        old_title = old_note.title
+        
+        # Check if we are ONLY updating 'is_favorite'
+        validated_keys = set(serializer.validated_data.keys())
+        if validated_keys == {'is_favorite'}:
+            # Use .update() to bypass auto_now=True on updated_at
+            Note.objects.filter(id=serializer.instance.id).update(
+                is_favorite=serializer.validated_data['is_favorite']
+            )
+            serializer.instance.refresh_from_db()
+            return
+            
         note = serializer.save(last_edited_by=self.request.user)
+        
+        from apps.notes.models import WorkspaceActivity
+        if note.workspace:
+            if old_title != note.title:
+                WorkspaceActivity.log(note.workspace, self.request.user, 'Changed note title', {'old': old_title, 'new': note.title, 'note_id': note.id})
+            elif 'body' in validated_keys:
+                WorkspaceActivity.log(note.workspace, self.request.user, 'Edited a note', {'title': note.title, 'note_id': note.id})
         
         # Create version snapshot synchronously (no Celery broker needed)
         try:
@@ -61,6 +92,10 @@ class NoteViewSet(viewsets.ModelViewSet):
         """Soft delete: set is_deleted=True and create TrashBin entry."""
         instance.is_deleted = True
         instance.save()
+        
+        from apps.notes.models import WorkspaceActivity
+        if instance.workspace:
+            WorkspaceActivity.log(instance.workspace, self.request.user, 'Deleted a note', {'title': instance.title, 'note_id': instance.id})
         
         # Create trash bin entry so note appears in trash
         TrashBin.create_from_note(instance, self.request.user)
@@ -251,8 +286,8 @@ class NoteViewSet(viewsets.ModelViewSet):
             attachment = MediaAttachment.objects.create(
                 note=note,
                 uploader=request.user,
-                s3_key=presigned_data['s3_key'],
-                file_name=file_name
+                s3_url=presigned_data['s3_key'],
+                original_filename=file_name
             )
             
             return Response({
@@ -266,6 +301,31 @@ class NoteViewSet(viewsets.ModelViewSet):
                 {'detail': f'Failed to generate presigned URL: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+    
+    @action(detail=False, methods=['post'], url_path='reorder')
+    def reorder(self, request):
+        """
+        Update the custom sort order of notes.
+        POST /api/v1/notes/reorder/
+        {
+            "ordered_ids": [5, 2, 8, 1]
+        }
+        """
+        ordered_ids = request.data.get('ordered_ids', [])
+        if not isinstance(ordered_ids, list):
+            return Response({'detail': 'ordered_ids must be a list'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        # Total count to reverse the index (highest index appears first)
+        total = len(ordered_ids)
+        
+        # We could use bulk_update, but for < 1000 items, sequential updates are fine
+        # and bypass auto_now=True on updated_at
+        for idx, note_id in enumerate(ordered_ids):
+            Note.objects.filter(id=note_id, user=request.user).update(
+                custom_sort_index=total - idx
+            )
+            
+        return Response({'message': 'Notes reordered successfully.'}, status=status.HTTP_200_OK)
     
     @action(detail=True, methods=['delete'], url_path='links/(?P<target_note_id>[0-9]+)')
     def delete_link(self, request, pk=None, target_note_id=None):

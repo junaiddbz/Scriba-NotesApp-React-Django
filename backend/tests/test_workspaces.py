@@ -55,7 +55,7 @@ class TestWorkspaceCRUD:
             user=user,
             workspace=workspace,
             title='Note in WS',
-            content='Content'
+            body='Content'
         )
         
         response = authenticated_client.delete(f'/api/v1/workspaces/{workspace.id}/')

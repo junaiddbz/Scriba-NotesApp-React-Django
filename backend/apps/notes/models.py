@@ -40,11 +40,12 @@ class Note(models.Model):
     - is_deleted: Soft delete flag
     """
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='notes')
-    workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name='notes', null=True, blank=True)
+    workspace = models.ForeignKey(Workspace, on_delete=models.SET_NULL, related_name='notes', null=True, blank=True)
 
     title = models.CharField(max_length=255)
     body = models.TextField(blank=True, default='')
     tags = models.JSONField(default=list, blank=True)
+    is_favorite = models.BooleanField(default=False, db_index=True)
     
     is_deleted = models.BooleanField(default=False, db_index=True)
     last_edited_by = models.ForeignKey(
@@ -57,9 +58,10 @@ class Note(models.Model):
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    custom_sort_index = models.BigIntegerField(default=0)
     
     class Meta:
-        ordering = ['-updated_at']
+        ordering = ['-custom_sort_index', '-updated_at']
         indexes = [
             models.Index(fields=['user_id', 'workspace_id']),
             models.Index(fields=['user_id', 'is_deleted']),
@@ -134,3 +136,37 @@ class NoteLink(models.Model):
     
     def __str__(self):
         return f"{self.source_note.title} -> {self.target_note.title}"
+
+
+class WorkspaceActivity(models.Model):
+    """
+    Detailed audit log for workspace activities.
+    """
+    workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name='activities')
+    user = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True)
+    action_type = models.CharField(max_length=100)
+    details = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['workspace_id', '-created_at']),
+        ]
+
+    def __str__(self):
+        username = self.user.get_full_name() or self.user.email if self.user else "System"
+        return f"{username} {self.action_type} in {self.workspace.name}"
+
+    @staticmethod
+    def log(workspace, user, action_type, details=None):
+        if workspace is None:
+            return None
+        if not details:
+            details = {}
+        return WorkspaceActivity.objects.create(
+            workspace=workspace,
+            user=user,
+            action_type=action_type,
+            details=details
+        )

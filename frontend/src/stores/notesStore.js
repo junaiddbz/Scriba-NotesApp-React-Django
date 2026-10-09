@@ -54,25 +54,27 @@ export const useNotesStore = create((set, get) => ({
   },
 
   updateNote: async (id, data) => {
-    set({ isLoading: true, error: null });
+    // We intentionally don't set isLoading: true here to prevent the UI from flashing
+    // during autosaves or when toggling favorites
+    set({ error: null });
     try {
-      const response = await notesAPI.update(id, data);
+      // Use partialUpdate (PATCH) instead of update (PUT) so we can update single fields
+      const response = await notesAPI.partialUpdate(id, data);
       const { notes, currentNote } = get();
 
       const updatedNotes = notes.map((note) =>
-        note.id === id ? response.data : note
+        note.id === id ? { ...note, ...response.data } : note
       );
 
       set({
         notes: updatedNotes,
-        currentNote: currentNote?.id === id ? response.data : currentNote,
-        isLoading: false,
+        currentNote: currentNote?.id === id ? { ...currentNote, ...response.data } : currentNote,
       });
 
       return response.data;
     } catch (error) {
       const errorMessage = error.response?.data?.detail || 'Failed to update note';
-      set({ error: errorMessage, isLoading: false });
+      set({ error: errorMessage });
       throw error;
     }
   },
@@ -95,11 +97,23 @@ export const useNotesStore = create((set, get) => ({
     }
   },
 
+  reorderNotes: async (orderedIds) => {
+    // Optimistically reorder in state if needed, but since frontend handles the drag state,
+    // we can just make the API call silently.
+    try {
+      await notesAPI.reorder(orderedIds);
+      // Optional: Could refetch or let frontend rely on local state swap.
+    } catch (error) {
+      console.error('Failed to reorder notes:', error);
+      throw error;
+    }
+  },
+
   searchNotes: async (query) => {
     set({ isLoading: true, error: null, searchQuery: query });
     try {
       const response = await notesAPI.search(query);
-      set({ notes: response.data, isLoading: false });
+      set({ isLoading: false });
       return response.data;
     } catch (error) {
       const errorMessage = error.response?.data?.detail || 'Search failed';

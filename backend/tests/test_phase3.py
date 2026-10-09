@@ -37,14 +37,15 @@ class TestNoteSharing(TestCase):
         # Create workspace and note
         self.workspace = Workspace.objects.create(
             name='Test Workspace',
-            owner=self.owner
+            user=self.owner
         )
         self.note = Note.objects.create(
             title='Test Note',
-            content='Content',
+            body='Content',
             user=self.owner
         )
-        self.note.workspaces.add(self.workspace)
+        self.note.workspace = self.workspace
+        self.note.save()
         
         self.client.force_authenticate(user=self.owner)
     
@@ -224,7 +225,7 @@ class TestWorkspaceSharing(TestCase):
         
         self.workspace = Workspace.objects.create(
             name='Test Workspace',
-            owner=self.owner
+            user=self.owner
         )
         
         self.client.force_authenticate(user=self.owner)
@@ -253,7 +254,7 @@ class TestWorkspaceSharing(TestCase):
         """Test that user cannot share workspace they don't own."""
         other_workspace = Workspace.objects.create(
             name='Other Workspace',
-            owner=self.collaborator
+            user=self.collaborator
         )
         
         response = self.client.post(
@@ -378,15 +379,16 @@ class TestPhase3Integration(TestCase):
         
         self.workspace = Workspace.objects.create(
             name='Project Workspace',
-            owner=self.owner
+            user=self.owner
         )
         
         self.note = Note.objects.create(
             title='Project Notes',
-            content='Initial content',
+            body='Initial content',
             user=self.owner
         )
-        self.note.workspaces.add(self.workspace)
+        self.note.workspace = self.workspace
+        self.note.save()
     
     def test_full_sharing_workflow(self):
         """Test complete sharing workflow."""

@@ -137,7 +137,7 @@ def create_note_version_snapshot(note_id, change_description=''):
         # Create version snapshot
         NoteVersion.objects.create(
             note=note,
-            content_snapshot=note.content,
+            content_snapshot=note.body,
             editor=note.last_edited_by,
             change_description=change_description or 'Autosaved',
             version_number=next_version_number,

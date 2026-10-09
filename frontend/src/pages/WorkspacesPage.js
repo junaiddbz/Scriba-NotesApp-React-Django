@@ -11,7 +11,8 @@ import {
   FiSettings,
   FiPlus,
   FiX,
-  FiCheck
+  FiCheck,
+  FiShare2
 } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -316,7 +317,7 @@ const WorkspaceCard = ({ workspace, onEdit, onDelete, onClick }) => {
 
   return (
     <div
-      className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-orange-400/40 hover:bg-white/10 transition-all cursor-pointer group shadow-lg backdrop-blur-lg"
+      className="flex flex-col h-full bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-orange-400/40 hover:bg-white/10 transition-all cursor-pointer group shadow-lg backdrop-blur-lg"
       onClick={handleCardClick}
     >
       {/* Header */}
@@ -330,56 +331,67 @@ const WorkspaceCard = ({ workspace, onEdit, onDelete, onClick }) => {
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="font-bold text-white truncate">{workspace.name}</h3>
-            <p className="text-sm text-white/70">
-              {workspace.is_public ? 'Public' : 'Private'}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-white/70">
+                {workspace.is_public ? 'Public' : 'Private'}
+              </p>
+              {workspace.user_permission && workspace.user_permission !== 'owner' && (
+                <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-orange-500/20 text-orange-400">
+                  <FiShare2 size={10} /> Shared with you
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="relative workspace-menu">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowMenu(!showMenu);
-            }}
-            className="p-1 hover:bg-white/10 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            <FiMoreVertical size={16} className="text-white/70" />
-          </button>
+        {workspace.user_permission && workspace.user_permission !== 'viewer' && (
+          <div className="relative workspace-menu">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMenu(!showMenu);
+              }}
+              className="p-1 hover:bg-white/10 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <FiMoreVertical size={16} className="text-white/70" />
+            </button>
 
-          {showMenu && (
-            <>
-              {/* Backdrop */}
-              <div
-                className="fixed inset-0 z-10"
-                onClick={() => setShowMenu(false)}
-              />
-              {/* Menu */}
-              <div className="absolute right-0 top-full mt-1 w-40 bg-slate-900/95 rounded-2xl shadow-2xl z-20 border border-white/10">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit();
-                    setShowMenu(false);
-                  }}
-                  className="w-full text-left px-3 py-2 text-sm text-white/80 hover:bg-white/10 flex items-center gap-2 rounded-t-2xl"
-                >
-                  <FiEdit3 size={14} /> Edit
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete();
-                    setShowMenu(false);
-                  }}
-                  className="w-full text-left px-3 py-2 text-sm text-red-300 hover:bg-white/10 flex items-center gap-2 rounded-b-2xl"
-                >
-                  <FiTrash2 size={14} /> Delete
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+            {showMenu && (
+              <>
+                {/* Backdrop */}
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowMenu(false)}
+                />
+                {/* Menu */}
+                <div className="absolute right-0 top-full mt-1 w-40 bg-slate-900/95 rounded-2xl shadow-2xl z-20 border border-white/10">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit();
+                      setShowMenu(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 text-sm text-white/80 hover:bg-white/10 flex items-center gap-2 ${workspace.user_permission === 'owner' ? 'rounded-t-2xl' : 'rounded-2xl'}`}
+                  >
+                    <FiEdit3 size={14} /> Edit
+                  </button>
+                  {workspace.user_permission === 'owner' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete();
+                        setShowMenu(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-red-300 hover:bg-white/10 flex items-center gap-2 rounded-b-2xl"
+                    >
+                      <FiTrash2 size={14} /> Delete
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Description */}
@@ -390,18 +402,22 @@ const WorkspaceCard = ({ workspace, onEdit, onDelete, onClick }) => {
       )}
 
       {/* Stats */}
-      <div className="flex items-center justify-between text-sm text-white/50">
+      <div className="mt-auto pt-4 border-t border-white/5 flex flex-wrap items-center justify-between gap-3 text-sm text-white/50">
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <FiFileText size={14} />
-            <span>{workspace.notes_count || 0} notes</span>
+            <span className="whitespace-nowrap">
+              {workspace.notes_count || 0} {(workspace.notes_count || 0) === 1 ? 'note' : 'notes'}
+            </span>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <FiUsers size={14} />
-            <span>{workspace.members_count || 1} members</span>
+            <span className="whitespace-nowrap">
+              {workspace.members_count || 1} {(workspace.members_count || 1) === 1 ? 'member' : 'members'}
+            </span>
           </div>
         </div>
-        <span>
+        <span className="whitespace-nowrap text-xs bg-white/5 px-2 py-1 rounded-md">
           {workspace.updated_at ? formatDistanceToNow(new Date(workspace.updated_at), { addSuffix: true }) : 'Unknown'}
         </span>
       </div>

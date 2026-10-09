@@ -21,6 +21,33 @@ const ProfilePage = () => {
     email: '',
   });
 
+  const { changePassword } = useAuthStore();
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  const handleChangePasswordSubmit = async () => {
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
+    if (passwordForm.newPassword.length < 8) {
+      toast.error('Password must be at least 8 characters long');
+      return;
+    }
+    setIsChangingPassword(true);
+    try {
+      await changePassword(passwordForm.oldPassword, passwordForm.newPassword);
+      toast.success('Password changed successfully');
+      setShowPasswordModal(false);
+      setPasswordForm({ oldPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (error) {
+      toast.error(error.response?.data?.detail || error.response?.data?.old_password?.[0] || 'Failed to change password');
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
   // Initialize form data with user data
   useEffect(() => {
     if (user) {
@@ -361,7 +388,7 @@ const ProfilePage = () => {
                   Account Settings
                 </button>
                 <button
-                  onClick={() => navigate('/forgot-password')}
+                  onClick={() => setShowPasswordModal(true)}
                   className="w-full text-left px-4 py-3 border border-white/10 rounded-2xl hover:bg-white/10 transition-colors text-white/80"
                 >
                   Change Password
@@ -371,6 +398,76 @@ const ProfilePage = () => {
           </div>
         </div>
       </div>
+
+      {/* Change Password Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-slate-900 rounded-3xl shadow-2xl max-w-md w-full mx-4 p-6 border border-white/10">
+            <h3 className="text-lg font-semibold text-white mb-4">Change Password</h3>
+            
+            <form onSubmit={(e) => { e.preventDefault(); handleChangePasswordSubmit(); }}>
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Old Password</label>
+                  <input
+                    type="password"
+                    name="oldPassword"
+                    autoComplete="current-password"
+                    value={passwordForm.oldPassword}
+                    onChange={(e) => setPasswordForm(p => ({ ...p, oldPassword: e.target.value }))}
+                    className="w-full px-4 py-2 border border-white/10 rounded-xl bg-white/5 text-white focus:outline-none focus:border-orange-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">New Password</label>
+                  <input
+                    type="password"
+                    name="newPassword"
+                    autoComplete="new-password"
+                    value={passwordForm.newPassword}
+                    onChange={(e) => setPasswordForm(p => ({ ...p, newPassword: e.target.value }))}
+                    className="w-full px-4 py-2 border border-white/10 rounded-xl bg-white/5 text-white focus:outline-none focus:border-orange-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Confirm New Password</label>
+                  <input
+                    type="password"
+                    name="confirmPassword"
+                    autoComplete="new-password"
+                    value={passwordForm.confirmPassword}
+                    onChange={(e) => setPasswordForm(p => ({ ...p, confirmPassword: e.target.value }))}
+                    className="w-full px-4 py-2 border border-white/10 rounded-xl bg-white/5 text-white focus:outline-none focus:border-orange-500"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPasswordModal(false);
+                    setPasswordForm({ oldPassword: '', newPassword: '', confirmPassword: '' });
+                  }}
+                  className="flex-1 px-4 py-2 border border-white/10 text-white/80 rounded-full hover:bg-white/10 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isChangingPassword}
+                  className="flex-1 px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-400 hover:to-orange-500 disabled:opacity-70 text-white rounded-full transition-colors"
+                >
+                  {isChangingPassword ? 'Changing...' : 'Change Password'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

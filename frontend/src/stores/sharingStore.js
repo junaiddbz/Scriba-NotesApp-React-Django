@@ -88,6 +88,23 @@ export const useSharingStore = create((set, get) => ({
     }
   },
 
+  toggleHideShare: async (shareId) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await sharingAPI.toggleHideShare(shareId);
+      const { sharedWithMe } = get();
+      const updatedShared = sharedWithMe.map((share) =>
+        share.id === shareId ? { ...share, is_hidden: response.data.is_hidden } : share
+      );
+      set({ sharedWithMe: updatedShared, isLoading: false });
+      return response.data;
+    } catch (error) {
+      const errorMessage = error.response?.data?.detail || 'Failed to toggle visibility';
+      set({ error: errorMessage, isLoading: false });
+      throw error;
+    }
+  },
+
   shareWorkspace: async (workspaceId, data) => {
     set({ isLoading: true, error: null });
     try {
@@ -96,6 +113,31 @@ export const useSharingStore = create((set, get) => ({
       return response.data;
     } catch (error) {
       const errorMessage = error.response?.data?.detail || 'Failed to share workspace';
+      set({ error: errorMessage, isLoading: false });
+      throw error;
+    }
+  },
+
+  updateWorkspacePermission: async (shareId, permission) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await sharingAPI.updateWorkspacePermission(shareId, permission);
+      set({ isLoading: false });
+      return response.data;
+    } catch (error) {
+      const errorMessage = error.response?.data?.detail || 'Failed to update workspace permission';
+      set({ error: errorMessage, isLoading: false });
+      throw error;
+    }
+  },
+
+  removeWorkspaceShare: async (shareId) => {
+    set({ isLoading: true, error: null });
+    try {
+      await sharingAPI.removeWorkspaceShare(shareId);
+      set({ isLoading: false });
+    } catch (error) {
+      const errorMessage = error.response?.data?.detail || 'Failed to remove workspace share';
       set({ error: errorMessage, isLoading: false });
       throw error;
     }

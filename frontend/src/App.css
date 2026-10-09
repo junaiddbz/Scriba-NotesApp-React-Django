@@ -29,6 +29,11 @@
 }
 
 /* BASE STYLES */
+html {
+  overflow-y: scroll; /* Forces vertical scrollbar to always be present to prevent layout shift */
+  scrollbar-gutter: stable;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -74,14 +79,10 @@ a {
 
 /* Smooth transitions */
 * {
-  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+  transition: background-color 0.2s, color 0.2s;
 }
 
-/* Focus styles */
-:focus-visible {
-  outline: 2px solid var(--color-main);
-  outline-offset: 2px;
-}
+/* Focus styles removed to prevent unwanted flashes */
 
 /* Button animations */
 button {
@@ -96,13 +97,12 @@ button:active {
 input,
 textarea,
 select {
-  transition: all 0.2s;
+  transition: background-color 0.2s, color 0.2s;
 }
 
-input:focus,
-textarea:focus,
-select:focus {
-  border-color: var(--color-main);
+input:focus, textarea:focus, select:focus {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 /* Placeholder styling */

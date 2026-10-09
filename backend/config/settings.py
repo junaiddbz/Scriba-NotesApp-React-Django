@@ -12,6 +12,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = env('SECRET_KEY', default='dev-secret-key-change-in-production')
 DEBUG = env('DEBUG', default=True)
 ALLOWED_HOSTS = env('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
+FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:5173')
 
 # Application definition
 INSTALLED_APPS = [
@@ -341,3 +342,7 @@ INTERNAL_IPS = ['127.0.0.1']
 # Performance Monitoring
 # ========================================
 SLOW_QUERY_THRESHOLD = 0.2  # 200ms in seconds
+
+# Celery settings for testing
+CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_EAGER_PROPAGATES = True

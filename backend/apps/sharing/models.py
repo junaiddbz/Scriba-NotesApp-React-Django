@@ -49,6 +49,10 @@ class NoteShare(models.Model):
         default=True,
         help_text='Soft delete - user can deactivate without losing history'
     )
+    is_hidden = models.BooleanField(
+        default=False,
+        help_text='Whether the shared user has hidden this note from their main view'
+    )
 
     class Meta:
         unique_together = ('note', 'shared_with')
@@ -112,6 +116,10 @@ class WorkspaceShare(models.Model):
     is_active = models.BooleanField(
         default=True,
         help_text='Soft delete - user can deactivate without losing history'
+    )
+    is_hidden = models.BooleanField(
+        default=False,
+        help_text='Whether the shared user has hidden this workspace from their main view'
     )
 
     class Meta:

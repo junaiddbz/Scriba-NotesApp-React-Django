@@ -5,6 +5,7 @@ from rest_framework import status
 User = get_user_model()
 
 
+@pytest.mark.django_db
 class TestAuthentication:
     """Test authentication endpoints."""
     
@@ -35,7 +36,7 @@ class TestAuthentication:
     def test_user_login(self, api_client, user):
         """Test user login."""
         data = {
-            'email': 'test@example.com',
+            'username': 'test@example.com',
             'password': 'testpass123',
         }
         response = api_client.post('/api/v1/auth/token/', data)
@@ -47,7 +48,7 @@ class TestAuthentication:
     def test_login_invalid_credentials(self, api_client, user):
         """Test login with invalid credentials."""
         data = {
-            'email': 'test@example.com',
+            'username': 'test@example.com',
             'password': 'wrongpassword',
         }
         response = api_client.post('/api/v1/auth/token/', data)

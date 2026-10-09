@@ -10,11 +10,12 @@ class NoteFilter(django_filters.FilterSet):
     Note: For search functionality, use DRF's SearchFilter instead.
     """
     workspace = django_filters.NumberFilter(field_name='workspace_id')
+    workspace__isnull = django_filters.BooleanFilter(field_name='workspace_id', lookup_expr='isnull')
     tags = django_filters.CharFilter(method='filter_tags')
     
     class Meta:
         model = Note
-        fields = ['workspace']
+        fields = ['workspace', 'workspace__isnull']
     
     def filter_tags(self, queryset, name, value):
         """Filter by tags (comma-separated)."""

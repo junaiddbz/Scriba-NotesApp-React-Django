@@ -10,7 +10,7 @@ class TestNoteCRUD:
         """Test creating a note."""
         data = {
             'title': 'Test Note',
-            'content': '<p>Test content</p>',
+            'body': '<p>Test content</p>',
             'workspace_id': workspace.id,
         }
         response = authenticated_client.post('/api/v1/notes/', data)
@@ -26,7 +26,7 @@ class TestNoteCRUD:
                 user=user,
                 workspace=workspace,
                 title=f'Note {i}',
-                content='Content'
+                body='Content'
             )
         
         response = authenticated_client.get('/api/v1/notes/')
@@ -39,7 +39,7 @@ class TestNoteCRUD:
             user=user,
             workspace=workspace,
             title='Detail Test',
-            content='Content'
+            body='Content'
         )
         
         response = authenticated_client.get(f'/api/v1/notes/{note.id}/')
@@ -52,15 +52,15 @@ class TestNoteCRUD:
             user=user,
             workspace=workspace,
             title='Original',
-            content='Original content'
+            body='Original content'
         )
         
-        data = {'content': '<p>Updated content</p>'}
+        data = {'body': '<p>Updated content</p>'}
         response = authenticated_client.patch(f'/api/v1/notes/{note.id}/', data)
         assert response.status_code == status.HTTP_200_OK
         
         note.refresh_from_db()
-        assert note.content == '<p>Updated content</p>'
+        assert note.body == '<p>Updated content</p>'
     
     def test_delete_note(self, authenticated_client, user, workspace):
         """Test deleting a note (soft delete)."""
@@ -68,7 +68,7 @@ class TestNoteCRUD:
             user=user,
             workspace=workspace,
             title='To Delete',
-            content='Content'
+            body='Content'
         )
         
         response = authenticated_client.delete(f'/api/v1/notes/{note.id}/')
@@ -83,7 +83,7 @@ class TestNoteCRUD:
             user=user,
             workspace=workspace,
             title='To Delete',
-            content='Content',
+            body='Content',
             is_deleted=True
         )
         
@@ -119,7 +119,7 @@ class TestNoteCRUD:
             user=user,
             workspace=workspace,
             title='Secret Note',
-            content='Secret'
+            body='Secret'
         )
         
         # Try to access as other user
@@ -139,7 +139,7 @@ class TestNoteVersioning:
             user=user,
             workspace=workspace,
             title='Version Test',
-            content='v1'
+            body='v1'
         )
         
         # Create a version

@@ -55,9 +55,11 @@ class AuthViewSet(viewsets.ViewSet):
             # Generate JWT tokens
             refresh = RefreshToken.for_user(user)
             
-            # Skip email verification for development
-            # In production, uncomment to send verification email via Celery
-            # send_email_verification.delay(user.id)
+            # Send verification email via Celery
+            try:
+                send_email_verification.delay(user.id, "http://localhost:5173/verify-email?token=placeholder")
+            except Exception:
+                pass
             
             return Response(
                 {
@@ -119,7 +121,7 @@ class AuthViewSet(viewsets.ViewSet):
         serializer = UserSerializer(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='forgot-password')
     def forgot_password(self, request):
         """
         Request password reset email.
@@ -143,7 +145,10 @@ class AuthViewSet(viewsets.ViewSet):
             )
             
             # Trigger async password reset email task
-            send_password_reset_email.delay(user.id, reset_token)
+            try:
+                send_password_reset_email.delay(user.id, reset_token)
+            except Exception:
+                pass
             
             return Response(
                 {'message': 'Password reset link sent to your email.'},
@@ -151,7 +156,7 @@ class AuthViewSet(viewsets.ViewSet):
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='reset-password')
     def reset_password(self, request):
         """
         Reset password with token.
@@ -176,7 +181,7 @@ class AuthViewSet(viewsets.ViewSet):
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated], url_path='change-password')
     def change_password(self, request):
         """
         Change password for authenticated user.

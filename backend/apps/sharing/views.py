@@ -36,11 +36,14 @@ class NoteShareViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """
-        Get note shares where user is either the sharer or recipient.
+        Get note shares where user is either the sharer, recipient, or an admin/owner of the note.
         """
         return NoteShare.objects.filter(
-            Q(shared_by=self.request.user) | Q(shared_with=self.request.user)
-        )
+            Q(shared_by=self.request.user) | 
+            Q(shared_with=self.request.user) |
+            Q(note__user=self.request.user) |
+            Q(note__shares__shared_with=self.request.user, note__shares__permission_level=PermissionChoices.ADMIN, note__shares__is_active=True)
+        ).distinct()
     
     def get_serializer_class(self):
         """Use list serializer for list views."""
@@ -52,14 +55,75 @@ class NoteShareViewSet(viewsets.ModelViewSet):
         """Set current user as the share initiator."""
         note_id = self.request.data.get('note')
         
-        # Verify user owns the note
-        try:
-            note = Note.objects.get(id=note_id, user=self.request.user)
-        except Note.DoesNotExist:
-            raise serializers.ValidationError('You do not own this note.')
+        # Verify user owns the note or is an admin
+        note = Note.objects.filter(id=note_id).first()
+        if not note:
+            raise serializers.ValidationError('Note not found.')
+            
+        if note.user != self.request.user:
+            # Check if user has admin permission
+            share = NoteShare.objects.filter(
+                note=note, 
+                shared_with=self.request.user, 
+                permission_level=PermissionChoices.ADMIN, 
+                is_active=True
+            ).first()
+            if not share:
+                raise serializers.ValidationError('You do not have permission to share this note.')
         
         serializer.save(shared_by=self.request.user)
     
+    def _check_admin_permission(self, share, request):
+        if share.note.user == request.user:
+            return True, False # is_admin, is_self
+        is_self = share.shared_with == request.user
+        user_share = NoteShare.objects.filter(
+            note=share.note, 
+            shared_with=request.user, 
+            permission_level=PermissionChoices.ADMIN, 
+            is_active=True
+        ).first()
+        if user_share:
+            return True, is_self
+        return False, is_self
+
+    def update(self, request, *args, **kwargs):
+        share = self.get_object()
+        is_admin, is_self = self._check_admin_permission(share, request)
+        if not is_admin:
+            return Response({'detail': 'You do not have permission to modify this share.'}, status=status.HTTP_403_FORBIDDEN)
+        if is_self and share.note.user != request.user:
+            return Response({'detail': 'Admins cannot modify their own permissions.'}, status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        share = self.get_object()
+        is_admin, is_self = self._check_admin_permission(share, request)
+        if not is_admin:
+            return Response({'detail': 'You do not have permission to modify this share.'}, status=status.HTTP_403_FORBIDDEN)
+        if is_self and share.note.user != request.user:
+            return Response({'detail': 'Admins cannot modify their own permissions.'}, status=status.HTTP_403_FORBIDDEN)
+        return super().partial_update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        return self.revoke(request, *args, **kwargs)
+    
+    @action(detail=True, methods=['post'], url_path='toggle-hide')
+    def toggle_hide(self, request, pk=None):
+        """
+        Toggle the is_hidden status for the recipient.
+        POST /api/v1/note-shares/{id}/toggle-hide/
+        """
+        share = self.get_object()
+        if share.shared_with != request.user:
+            return Response(
+                {'detail': 'You can only hide your own shares.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        share.is_hidden = not share.is_hidden
+        share.save()
+        return Response({'is_hidden': share.is_hidden, 'message': 'Visibility updated.'}, status=status.HTTP_200_OK)
+
     @action(detail=True, methods=['post'])
     def revoke(self, request, pk=None):
         """
@@ -67,11 +131,17 @@ class NoteShareViewSet(viewsets.ModelViewSet):
         POST /api/v1/note-shares/{id}/revoke/
         """
         share = self.get_object()
+        is_admin, is_self = self._check_admin_permission(share, request)
         
-        # Only the share initiator can revoke
-        if share.shared_by != request.user:
+        if not is_admin:
             return Response(
-                {'detail': 'Only the share initiator can revoke this share.'},
+                {'detail': 'You do not have permission to revoke this share.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        if is_self and share.note.user != request.user:
+            return Response(
+                {'detail': 'Admins cannot remove their own share.'},
                 status=status.HTTP_403_FORBIDDEN
             )
         
@@ -83,7 +153,7 @@ class NoteShareViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK
         )
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_path='shared-with-me')
     def shared_with_me(self, request):
         """
         Get all notes shared with the current user.
@@ -91,13 +161,14 @@ class NoteShareViewSet(viewsets.ModelViewSet):
         """
         shares = NoteShare.objects.filter(
             shared_with=request.user,
-            is_active=True
+            is_active=True,
+            note__is_deleted=False
         ).select_related('note', 'shared_by')
         
         serializer = NoteShareListSerializer(shares, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_path='shared-by-me')
     def shared_by_me(self, request):
         """
         Get all notes shared by the current user.
@@ -105,7 +176,8 @@ class NoteShareViewSet(viewsets.ModelViewSet):
         """
         shares = NoteShare.objects.filter(
             shared_by=request.user,
-            is_active=True
+            is_active=True,
+            note__is_deleted=False
         ).select_related('note', 'shared_with')
         
         serializer = NoteShareListSerializer(shares, many=True)
@@ -127,11 +199,14 @@ class WorkspaceShareViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """
-        Get workspace shares where user is either the sharer or recipient.
+        Get workspace shares where user is either the sharer, recipient, or an admin/owner of the workspace.
         """
         return WorkspaceShare.objects.filter(
-            Q(shared_by=self.request.user) | Q(shared_with=self.request.user)
-        )
+            Q(shared_by=self.request.user) | 
+            Q(shared_with=self.request.user) |
+            Q(workspace__user=self.request.user) |
+            Q(workspace__shares__shared_with=self.request.user, workspace__shares__permission_level=PermissionChoices.ADMIN, workspace__shares__is_active=True)
+        ).distinct()
     
     def get_serializer_class(self):
         """Use list serializer for list views."""
@@ -145,12 +220,63 @@ class WorkspaceShareViewSet(viewsets.ModelViewSet):
         
         # Verify user owns the workspace
         try:
-            workspace = Workspace.objects.get(id=workspace_id, owner=self.request.user)
+            workspace = Workspace.objects.get(id=workspace_id, user=self.request.user)
         except Workspace.DoesNotExist:
             raise serializers.ValidationError('You do not own this workspace.')
         
         serializer.save(shared_by=self.request.user)
     
+    def _check_admin_permission(self, share, request):
+        if share.workspace.user == request.user:
+            return True, False # is_admin, is_self
+        is_self = share.shared_with == request.user
+        user_share = WorkspaceShare.objects.filter(
+            workspace=share.workspace, 
+            shared_with=request.user, 
+            permission_level=PermissionChoices.ADMIN, 
+            is_active=True
+        ).first()
+        if user_share:
+            return True, is_self
+        return False, is_self
+
+    def update(self, request, *args, **kwargs):
+        share = self.get_object()
+        is_admin, is_self = self._check_admin_permission(share, request)
+        if not is_admin:
+            return Response({'detail': 'You do not have permission to modify this share.'}, status=status.HTTP_403_FORBIDDEN)
+        if is_self and share.workspace.user != request.user:
+            return Response({'detail': 'Admins cannot modify their own permissions.'}, status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        share = self.get_object()
+        is_admin, is_self = self._check_admin_permission(share, request)
+        if not is_admin:
+            return Response({'detail': 'You do not have permission to modify this share.'}, status=status.HTTP_403_FORBIDDEN)
+        if is_self and share.workspace.user != request.user:
+            return Response({'detail': 'Admins cannot modify their own permissions.'}, status=status.HTTP_403_FORBIDDEN)
+        return super().partial_update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        return self.revoke(request, *args, **kwargs)
+    
+    @action(detail=True, methods=['post'], url_path='toggle-hide')
+    def toggle_hide(self, request, pk=None):
+        """
+        Toggle the is_hidden status for the recipient.
+        POST /api/v1/note-shares/{id}/toggle-hide/
+        """
+        share = self.get_object()
+        if share.shared_with != request.user:
+            return Response(
+                {'detail': 'You can only hide your own shares.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        share.is_hidden = not share.is_hidden
+        share.save()
+        return Response({'is_hidden': share.is_hidden, 'message': 'Visibility updated.'}, status=status.HTTP_200_OK)
+
     @action(detail=True, methods=['post'])
     def revoke(self, request, pk=None):
         """
@@ -158,11 +284,17 @@ class WorkspaceShareViewSet(viewsets.ModelViewSet):
         POST /api/v1/workspace-shares/{id}/revoke/
         """
         share = self.get_object()
+        is_admin, is_self = self._check_admin_permission(share, request)
         
-        # Only the share initiator can revoke
-        if share.shared_by != request.user:
+        if not is_admin:
             return Response(
-                {'detail': 'Only the share initiator can revoke this share.'},
+                {'detail': 'You do not have permission to revoke this share.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        if is_self and share.workspace.user != request.user:
+            return Response(
+                {'detail': 'Admins cannot remove their own share.'},
                 status=status.HTTP_403_FORBIDDEN
             )
         
@@ -174,7 +306,7 @@ class WorkspaceShareViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK
         )
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_path='shared-with-me')
     def shared_with_me(self, request):
         """
         Get all workspaces shared with the current user.
@@ -188,7 +320,7 @@ class WorkspaceShareViewSet(viewsets.ModelViewSet):
         serializer = WorkspaceShareListSerializer(shares, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_path='shared-by-me')
     def shared_by_me(self, request):
         """
         Get all workspaces shared by the current user.
@@ -209,7 +341,7 @@ class OAuthProviderViewSet(viewsets.ViewSet):
     """
     permission_classes = [IsAuthenticated]
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_path='list-connections')
     def list_connections(self, request):
         """
         Get all OAuth provider connections for current user.
@@ -256,7 +388,7 @@ class OAuthProviderViewSet(viewsets.ViewSet):
             status=status.HTTP_200_OK
         )
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='google-callback')
     def google_callback(self, request):
         """
         Handle Google OAuth callback.
@@ -284,7 +416,7 @@ class OAuthProviderViewSet(viewsets.ViewSet):
             status=status.HTTP_200_OK
         )
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='github-callback')
     def github_callback(self, request):
         """
         Handle GitHub OAuth callback.

@@ -30,6 +30,11 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // Don't intercept requests to the token endpoints to avoid infinite loops and page reloads on login
+    if (originalRequest.url.includes('/auth/token/') || originalRequest.url.includes('/auth/login/')) {
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
@@ -82,13 +87,18 @@ export const authAPI = {
     apiClient.post('/v1/auth/change-password/', {
       old_password: oldPassword,
       new_password: newPassword,
+      new_password_confirm: newPassword, // Backend requires new_password_confirm
     }),
 
   resetPassword: (email) =>
     apiClient.post('/v1/auth/forgot-password/', { email }),
 
   confirmReset: (token, newPassword) =>
-    apiClient.post('/v1/auth/reset-password/', { token, new_password: newPassword }),
+    apiClient.post('/v1/auth/reset-password/', { 
+      token, 
+      password: newPassword,
+      password_confirm: newPassword 
+    }),
 };
 
 // =====================
@@ -114,6 +124,9 @@ export const notesAPI = {
   delete: (id) =>
     apiClient.delete(`/v1/notes/${id}/`),
 
+  reorder: (orderedIds) =>
+    apiClient.post('/v1/notes/reorder/', { ordered_ids: orderedIds }),
+
   search: (query) =>
     apiClient.get('/v1/notes/', { params: { search: query } }),
 
@@ -121,7 +134,7 @@ export const notesAPI = {
     apiClient.get(`/v1/notes/${id}/versions/`),
 
   restoreVersion: (id, versionId) =>
-    apiClient.post(`/v1/notes/${id}/restore-version/`, { version_id: versionId }),
+    apiClient.post(`/v1/notes/${id}/versions/${versionId}/restore/`),
 };
 
 // =====================
@@ -144,17 +157,14 @@ export const workspacesAPI = {
   delete: (id) =>
     apiClient.delete(`/v1/workspaces/${id}/`),
 
-  getFolders: (workspaceId) =>
-    apiClient.get(`/v1/workspaces/${workspaceId}/folders/`),
+  getActivities: (id) =>
+    apiClient.get(`/v1/workspaces/${id}/activities/`),
 
-  createFolder: (workspaceId, data) =>
-    apiClient.post(`/v1/workspaces/${workspaceId}/folders/`, data),
+  getTree: () =>
+    apiClient.get('/v1/workspaces/tree/'),
 
-  moveNote: (workspaceId, noteId, folderId) =>
-    apiClient.post(`/v1/workspaces/${workspaceId}/move-note/`, {
-      note_id: noteId,
-      folder_id: folderId,
-    }),
+  move: (id, parentId) =>
+    apiClient.post(`/v1/workspaces/${id}/move/`, { parent_workspace_id: parentId }),
 };
 
 // =====================
@@ -181,14 +191,14 @@ export const trashAPI = {
 
 export const sharingAPI = {
   getSharedWithMe: (params = {}) =>
-    apiClient.get('/v1/note-shares/', { params }),
+    apiClient.get('/v1/note-shares/shared-with-me/', { params }),
 
   getMyShares: (params = {}) =>
-    apiClient.get('/v1/note-shares/', { params }),
+    apiClient.get('/v1/note-shares/shared-by-me/', { params }),
 
   shareNote: (noteId, data) =>
     apiClient.post(`/v1/note-shares/`, {
-      note_id: noteId,
+      note: noteId,
       ...data,
     }),
 
@@ -198,11 +208,20 @@ export const sharingAPI = {
   removeShare: (shareId) =>
     apiClient.delete(`/v1/note-shares/${shareId}/`),
 
+  toggleHideShare: (shareId) =>
+    apiClient.post(`/v1/note-shares/${shareId}/toggle-hide/`),
+
   shareWorkspace: (workspaceId, data) =>
     apiClient.post(`/v1/workspace-shares/`, {
-      workspace_id: workspaceId,
+      workspace: workspaceId,
       ...data,
     }),
+
+  updateWorkspacePermission: (shareId, permission) =>
+    apiClient.patch(`/v1/workspace-shares/${shareId}/`, { permission_level: permission }),
+
+  removeWorkspaceShare: (shareId) =>
+    apiClient.delete(`/v1/workspace-shares/${shareId}/`),
 
   getWorkspaceMembers: (workspaceId) =>
     apiClient.get(`/v1/workspace-shares/`, { params: { workspace_id: workspaceId } }),
@@ -267,10 +286,10 @@ export const oauthAPI = {
     apiClient.get('/v1/oauth/github/'),
 
   handleGoogleCallback: (code) =>
-    apiClient.post('/oauth/google/callback/', { code }),
+    apiClient.post('/v1/oauth/google-callback/', { code }),
 
   handleGithubCallback: (code) =>
-    apiClient.post('/oauth/github/callback/', { code }),
+    apiClient.post('/v1/oauth/github-callback/', { code }),
 };
 
 // =====================
