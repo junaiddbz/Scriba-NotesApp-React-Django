@@ -1,4 +1,5 @@
 from rest_framework import serializers
+
 from apps.notes.models import Workspace
 
 
@@ -58,7 +59,7 @@ class WorkspaceSerializer(serializers.ModelSerializer):
         return "viewer"
 
     def get_active_shares(self, obj):
-        # All members can see who has access, but only owner/admin can modify (handled in views/permissions)
+        # All members can see who has access, but only owner/admin can modify (handled in views/permissions)  # noqa: E501
         from apps.sharing.models import WorkspaceShare
 
         shares = WorkspaceShare.objects.filter(

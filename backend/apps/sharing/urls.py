@@ -1,9 +1,10 @@
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
+
 from apps.sharing.views import (
     NoteShareViewSet,
-    WorkspaceShareViewSet,
     OAuthProviderViewSet,
+    WorkspaceShareViewSet,
 )
 
 app_name = "sharing"

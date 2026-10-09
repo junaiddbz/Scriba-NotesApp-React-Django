@@ -1,6 +1,7 @@
+from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from django.contrib.auth.password_validation import validate_password
+
 from .models import CustomUser, PasswordResetToken
 
 
@@ -76,7 +77,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
     def validate(self, attrs):
         username = attrs.get("username")
-        password = attrs.get("password")
+        attrs.get("password")
 
         # If username field looks like an email, try to find user by email
         if username and "@" in username:

@@ -1,8 +1,8 @@
+import logging
+
 import boto3
 from botocore.exceptions import ClientError
 from django.conf import settings
-import logging
-from datetime import timedelta
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -77,7 +77,7 @@ class S3Service:
             }
 
         except ClientError as e:
-            logger.error(f"Error generating presigned URL: {str(e)}")
+            logger.error(f"Error generating presigned URL: {e!s}")
             return {"error": str(e)}
 
     def delete_file(self, s3_key):
@@ -96,7 +96,7 @@ class S3Service:
             return {"status": "success"}
 
         except ClientError as e:
-            logger.error(f"Error deleting S3 file: {str(e)}")
+            logger.error(f"Error deleting S3 file: {e!s}")
             return {"error": str(e)}
 
     def get_file_url(self, s3_key):

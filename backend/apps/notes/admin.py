@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Note, Workspace, NoteVersion, MediaAttachment, NoteLink
+
+from .models import MediaAttachment, Note, NoteLink, NoteVersion, Workspace
 
 
 @admin.register(Workspace)

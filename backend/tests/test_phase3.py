@@ -1,18 +1,18 @@
-import pytest
-from django.test import TestCase
-from django.utils import timezone
-from rest_framework.test import APIClient
-from rest_framework import status
 from datetime import timedelta
 
+import pytest
 from apps.auth.models import CustomUser
 from apps.notes.models import Note, Workspace
 from apps.sharing.models import (
     NoteShare,
-    WorkspaceShare,
     PermissionChoices,
     UserOAuthProvider,
+    WorkspaceShare,
 )
+from django.test import TestCase
+from django.utils import timezone
+from rest_framework import status
+from rest_framework.test import APIClient
 
 
 @pytest.mark.django_db
@@ -99,7 +99,7 @@ class TestNoteSharing(TestCase):
 
         # Verify share is deactivated
         share.refresh_from_db()
-        assert share.is_active == False
+        assert share.is_active is False
 
     def test_cannot_revoke_others_share(self):
         """Test that user cannot revoke shares they didn't create."""
@@ -168,7 +168,7 @@ class TestNoteSharing(TestCase):
             expires_at=expired_time,
         )
 
-        assert share.is_expired == True
+        assert share.is_expired is True
 
     def test_permission_checks(self):
         """Test permission level checks."""
@@ -188,12 +188,12 @@ class TestNoteSharing(TestCase):
         )
 
         # Check editor permissions
-        assert editor_share.can_edit() == True
-        assert editor_share.can_admin() == False
+        assert editor_share.can_edit() is True
+        assert editor_share.can_admin() is False
 
         # Check viewer permissions
-        assert viewer_share.can_edit() == False
-        assert viewer_share.can_admin() == False
+        assert viewer_share.can_edit() is False
+        assert viewer_share.can_admin() is False
 
 
 @pytest.mark.django_db

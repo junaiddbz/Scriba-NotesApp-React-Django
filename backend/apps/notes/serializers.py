@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Note, NoteVersion, MediaAttachment, NoteLink, Workspace
+
+from .models import MediaAttachment, Note, NoteLink, NoteVersion, Workspace
 
 
 class NoteListSerializer(serializers.ModelSerializer):
@@ -45,7 +46,7 @@ class NoteListSerializer(serializers.ModelSerializer):
         if obj.user == request.user:
             return "owner"
 
-        from apps.sharing.models import NoteShare, WorkspaceShare, PermissionChoices
+        from apps.sharing.models import NoteShare, PermissionChoices, WorkspaceShare
 
         # Check direct share
         share = NoteShare.objects.filter(
@@ -162,7 +163,7 @@ class NoteDetailSerializer(serializers.ModelSerializer):
         if obj.user == request.user:
             return "owner"
 
-        from apps.sharing.models import NoteShare, WorkspaceShare, PermissionChoices
+        from apps.sharing.models import NoteShare, PermissionChoices, WorkspaceShare
 
         # Check direct share
         share = NoteShare.objects.filter(

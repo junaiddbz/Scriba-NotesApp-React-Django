@@ -1,23 +1,21 @@
+from datetime import timedelta
+from unittest.mock import patch
+
 import pytest
+from apps.auth.models import CustomUser, PasswordResetToken
+from apps.notes.models import MediaAttachment, Note, Workspace
+from apps.trash.models import TrashBin
+from celery.result import EagerResult
+from config.tasks import (
+    cleanup_expired_password_reset_tokens,
+    cleanup_expired_trash,
+    send_email_verification,
+    send_password_reset_email,
+)
 from django.test import TestCase
 from django.utils import timezone
-from rest_framework.test import APIClient
 from rest_framework import status
-from unittest.mock import patch, MagicMock
-from celery.result import EagerResult
-from datetime import timedelta
-
-from apps.auth.models import CustomUser
-from apps.trash.models import TrashBin
-from apps.auth.models import PasswordResetToken
-from apps.notes.models import Note, NoteVersion, MediaAttachment, Workspace
-from config.tasks import (
-    send_password_reset_email,
-    send_email_verification,
-    create_note_version_snapshot,
-    cleanup_expired_trash,
-    cleanup_expired_password_reset_tokens,
-)
+from rest_framework.test import APIClient
 
 
 @pytest.mark.django_db
@@ -301,7 +299,7 @@ class TestCleanupTasks(TestCase):
 
     def test_cleanup_expired_trash(self):
         """Test cleanup of expired trash items."""
-        workspace = Workspace.objects.create(name="Test Workspace", user=self.user)
+        Workspace.objects.create(name="Test Workspace", user=self.user)
 
         # Create old deleted note
         old_note = Note.objects.create(

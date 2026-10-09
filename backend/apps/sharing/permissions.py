@@ -1,5 +1,6 @@
 from rest_framework.permissions import BasePermission
-from apps.sharing.models import NoteShare, WorkspaceShare, PermissionChoices
+
+from apps.sharing.models import NoteShare, WorkspaceShare
 
 
 class IsNoteOwnerOrSharedWith(BasePermission):
@@ -17,10 +18,7 @@ class IsNoteOwnerOrSharedWith(BasePermission):
             note=obj, shared_with=request.user, is_active=True
         ).first()
 
-        if share and not share.is_expired:
-            return True
-
-        return False
+        return bool(share and not share.is_expired)
 
 
 class CanEditNote(BasePermission):
@@ -38,10 +36,7 @@ class CanEditNote(BasePermission):
             note=obj, shared_with=request.user, is_active=True
         ).first()
 
-        if share and not share.is_expired and share.can_edit():
-            return True
-
-        return False
+        return bool(share and not share.is_expired and share.can_edit())
 
 
 class CanAdminNote(BasePermission):
@@ -59,10 +54,7 @@ class CanAdminNote(BasePermission):
             note=obj, shared_with=request.user, is_active=True
         ).first()
 
-        if share and not share.is_expired and share.can_admin():
-            return True
-
-        return False
+        return bool(share and not share.is_expired and share.can_admin())
 
 
 class IsWorkspaceOwnerOrSharedWith(BasePermission):
@@ -80,10 +72,7 @@ class IsWorkspaceOwnerOrSharedWith(BasePermission):
             workspace=obj, shared_with=request.user, is_active=True
         ).first()
 
-        if share and not share.is_expired:
-            return True
-
-        return False
+        return bool(share and not share.is_expired)
 
 
 class CanEditWorkspace(BasePermission):
@@ -101,10 +90,7 @@ class CanEditWorkspace(BasePermission):
             workspace=obj, shared_with=request.user, is_active=True
         ).first()
 
-        if share and not share.is_expired and share.can_edit():
-            return True
-
-        return False
+        return bool(share and not share.is_expired and share.can_edit())
 
 
 class CanAdminWorkspace(BasePermission):
@@ -122,7 +108,4 @@ class CanAdminWorkspace(BasePermission):
             workspace=obj, shared_with=request.user, is_active=True
         ).first()
 
-        if share and not share.is_expired and share.can_admin():
-            return True
-
-        return False
+        return bool(share and not share.is_expired and share.can_admin())

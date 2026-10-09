@@ -1,25 +1,26 @@
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import SearchFilter, OrderingFilter
-from django.db.models import Q
-
-from .models import Note, NoteVersion, MediaAttachment, NoteLink, Workspace
-from .serializers import (
-    NoteListSerializer,
-    NoteDetailSerializer,
-    NoteCreateUpdateSerializer,
-    NoteVersionSerializer,
-    MediaAttachmentSerializer,
-    NoteLinkSerializer,
-)
-from .permissions import IsNoteOwner
-from .filters import NoteFilter
-from shared.s3_service import S3Service
 from config.tasks import create_note_version_snapshot
+from django.db.models import Q
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from shared.s3_service import S3Service
+
 from apps.trash.models import TrashBin
+
+from .filters import NoteFilter
+from .models import MediaAttachment, Note, NoteLink, NoteVersion
+from .permissions import IsNoteOwner
+from .serializers import (
+    MediaAttachmentSerializer,
+    NoteCreateUpdateSerializer,
+    NoteDetailSerializer,
+    NoteLinkSerializer,
+    NoteListSerializer,
+    NoteVersionSerializer,
+)
 
 
 class NoteViewSet(viewsets.ModelViewSet):
@@ -36,7 +37,7 @@ class NoteViewSet(viewsets.ModelViewSet):
     ordering = ["-updated_at"]
 
     def get_queryset(self):
-        """Only show notes belonging to the authenticated user or shared with them (directly or via workspace)."""
+        """Only show notes belonging to the authenticated user or shared with them (directly or via workspace)."""  # noqa: E501
         qs = Note.objects.filter(
             Q(user=self.request.user)
             | Q(shares__shared_with=self.request.user, shares__is_active=True)
@@ -112,7 +113,7 @@ class NoteViewSet(viewsets.ModelViewSet):
             )
         except Exception as e:
             # Log the error but don't fail the update request
-            print(f"Error creating version snapshot: {str(e)}")
+            print(f"Error creating version snapshot: {e!s}")
 
     def perform_destroy(self, instance):
         """Soft delete: set is_deleted=True and create TrashBin entry."""
@@ -336,7 +337,7 @@ class NoteViewSet(viewsets.ModelViewSet):
             )
         except Exception as e:
             return Response(
-                {"detail": f"Failed to generate presigned URL: {str(e)}"},
+                {"detail": f"Failed to generate presigned URL: {e!s}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 

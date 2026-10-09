@@ -1,6 +1,5 @@
-import pytest
+from apps.notes.models import Note, Workspace
 from rest_framework import status
-from apps.notes.models import Workspace, Note
 
 
 class TestWorkspaceCRUD:
@@ -95,9 +94,7 @@ class TestWorkspaceHierarchy:
         """Test getting hierarchical workspace tree."""
         root = Workspace.objects.create(user=user, name="Root")
         child = Workspace.objects.create(user=user, name="Child", parent_workspace=root)
-        grandchild = Workspace.objects.create(
-            user=user, name="Grandchild", parent_workspace=child
-        )
+        Workspace.objects.create(user=user, name="Grandchild", parent_workspace=child)
 
         response = authenticated_client.get("/api/v1/workspaces/tree/")
         assert response.status_code == status.HTTP_200_OK

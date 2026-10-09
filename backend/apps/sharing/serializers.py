@@ -1,11 +1,11 @@
-from rest_framework import serializers
-from apps.sharing.models import (
+from rest_framework import serializers  # noqa: E402
+
+from apps.auth.models import CustomUser  # noqa: E402
+from apps.sharing.models import (  # noqa: E402
     NoteShare,
-    WorkspaceShare,
-    PermissionChoices,
     UserOAuthProvider,
+    WorkspaceShare,
 )
-from apps.auth.models import CustomUser
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -76,18 +76,21 @@ class NoteShareSerializer(serializers.ModelSerializer):
 
         # Check if already shared
         note = attrs.get("note")
-        if note and email:
-            if NoteShare.objects.filter(
+        if (
+            note
+            and email
+            and NoteShare.objects.filter(
                 note=note, shared_with=user, is_active=True
-            ).exists():
-                raise serializers.ValidationError(
-                    {"shared_with_email": "This note is already shared with this user."}
-                )
+            ).exists()
+        ):
+            raise serializers.ValidationError(
+                {"shared_with_email": "This note is already shared with this user."}
+            )
 
         return super().validate(attrs)
 
 
-from apps.notes.models import Note
+from apps.notes.models import Note  # noqa: E402
 
 
 class NotePreviewSerializer(serializers.ModelSerializer):

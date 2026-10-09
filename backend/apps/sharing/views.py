@@ -1,29 +1,25 @@
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from rest_framework import serializers
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import SearchFilter, OrderingFilter
 from django.db.models import Q
-from django.utils import timezone
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import serializers, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
+from apps.notes.models import Note, Workspace
 from apps.sharing.models import (
     NoteShare,
-    WorkspaceShare,
-    UserOAuthProvider,
     PermissionChoices,
+    UserOAuthProvider,
+    WorkspaceShare,
 )
 from apps.sharing.serializers import (
-    NoteShareSerializer,
     NoteShareListSerializer,
-    WorkspaceShareSerializer,
-    WorkspaceShareListSerializer,
+    NoteShareSerializer,
     UserOAuthProviderSerializer,
+    WorkspaceShareListSerializer,
+    WorkspaceShareSerializer,
 )
-from apps.sharing.permissions import CanAdminNote, CanAdminWorkspace
-from apps.notes.models import Note, Workspace
-from apps.notes.permissions import IsNoteOwner, IsWorkspaceOwner
 
 
 class NoteShareViewSet(viewsets.ModelViewSet):
@@ -222,7 +218,7 @@ class WorkspaceShareViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """
-        Get workspace shares where user is either the sharer, recipient, or an admin/owner of the workspace.
+        Get workspace shares where user is either the sharer, recipient, or an admin/owner of the workspace.  # noqa: E501
         """
         return WorkspaceShare.objects.filter(
             Q(shared_by=self.request.user)
@@ -247,7 +243,7 @@ class WorkspaceShareViewSet(viewsets.ModelViewSet):
 
         # Verify user owns the workspace
         try:
-            workspace = Workspace.objects.get(id=workspace_id, user=self.request.user)
+            Workspace.objects.get(id=workspace_id, user=self.request.user)
         except Workspace.DoesNotExist:
             raise serializers.ValidationError("You do not own this workspace.")
 

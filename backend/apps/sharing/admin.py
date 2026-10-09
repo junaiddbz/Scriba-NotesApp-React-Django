@@ -1,9 +1,10 @@
 from django.contrib import admin
+
 from apps.sharing.models import (
-    NoteShare,
-    WorkspaceShare,
     CollaborativeEdit,
+    NoteShare,
     UserOAuthProvider,
+    WorkspaceShare,
 )
 
 

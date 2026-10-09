@@ -1,23 +1,24 @@
+import hashlib
+import secrets
+from datetime import timedelta
+
+from config.tasks import send_email_verification, send_password_reset_email
+from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.utils import timezone
-from datetime import timedelta
-import secrets
-import hashlib
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .models import CustomUser, PasswordResetToken
 from .serializers import (
-    UserSerializer,
-    UserRegistrationSerializer,
     CustomTokenObtainPairSerializer,
-    PasswordResetRequestSerializer,
     PasswordResetConfirmSerializer,
+    PasswordResetRequestSerializer,
+    UserRegistrationSerializer,
+    UserSerializer,
 )
-from config.tasks import send_password_reset_email, send_email_verification
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -34,8 +35,6 @@ class CustomTokenRefreshView(TokenRefreshView):
     Token refresh endpoint.
     Silently renews access token using refresh token from httpOnly cookie.
     """
-
-    pass
 
 
 class AuthViewSet(viewsets.ViewSet):
@@ -138,7 +137,7 @@ class AuthViewSet(viewsets.ViewSet):
 
             # Create reset token record
             expires_at = timezone.now() + timedelta(minutes=15)
-            password_reset_token = PasswordResetToken.objects.create(
+            PasswordResetToken.objects.create(
                 user=user, token_hash=token_hash, expires_at=expires_at
             )
 

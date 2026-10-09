@@ -1,6 +1,7 @@
-from django.db import models
 from django.contrib.auth import get_user_model
+from django.db import models
 from django.utils import timezone
+
 from apps.notes.models import Note, Workspace
 
 User = get_user_model()
@@ -57,14 +58,12 @@ class NoteShare(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.note.title} shared with {self.shared_with.username} ({self.permission_level})"
+        return f"{self.note.title} shared with {self.shared_with.username} ({self.permission_level})"  # noqa: E501
 
     @property
     def is_expired(self):
         """Check if share has expired due to time limit."""
-        if self.expires_at and timezone.now() > self.expires_at:
-            return True
-        return False
+        return bool(self.expires_at and timezone.now() > self.expires_at)
 
     def can_edit(self):
         """Check if shared user has edit permission."""
@@ -123,14 +122,12 @@ class WorkspaceShare(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.workspace.name} workspace shared with {self.shared_with.username} ({self.permission_level})"
+        return f"{self.workspace.name} workspace shared with {self.shared_with.username} ({self.permission_level})"  # noqa: E501
 
     @property
     def is_expired(self):
         """Check if share has expired due to time limit."""
-        if self.expires_at and timezone.now() > self.expires_at:
-            return True
-        return False
+        return bool(self.expires_at and timezone.now() > self.expires_at)
 
     def can_edit(self):
         """Check if shared user has edit permission."""

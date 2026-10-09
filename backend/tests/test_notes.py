@@ -1,6 +1,5 @@
-import pytest
-from rest_framework import status
 from apps.notes.models import Note, NoteVersion
+from rest_framework import status
 
 
 class TestNoteCRUD:

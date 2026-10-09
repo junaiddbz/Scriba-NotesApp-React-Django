@@ -1,6 +1,8 @@
+from datetime import timedelta
+
 from django.db import models
 from django.utils import timezone
-from datetime import timedelta
+
 from apps.auth.models import CustomUser
 from apps.notes.models import Note
 

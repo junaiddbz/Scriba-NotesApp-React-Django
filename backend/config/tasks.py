@@ -1,14 +1,13 @@
-from celery import shared_task
-from django.utils import timezone
-from datetime import timedelta
-from django.core.mail import send_mail
-from django.template.loader import render_to_string
-from django.conf import settings
 import logging
 
-from apps.auth.models import PasswordResetToken, CustomUser
+from apps.auth.models import CustomUser, PasswordResetToken
 from apps.notes.models import Note, NoteVersion
 from apps.trash.models import TrashBin
+from celery import shared_task
+from django.conf import settings
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -41,13 +40,13 @@ def send_password_reset_email(user_id, reset_token):
         html_message = render_to_string("emails/password_reset.html", context)
         plain_message = f"""
         Hi {user.get_full_name()},
-        
+
         Click here to reset your password: {reset_link}
-        
+
         This link expires in 15 minutes.
-        
+
         If you didn't request this, ignore this email.
-        
+
         Best regards,
         Elite Notes Team
         """
@@ -69,7 +68,7 @@ def send_password_reset_email(user_id, reset_token):
         logger.error(f"User {user_id} not found for password reset email")
         return {"status": "error", "reason": "user_not_found"}
     except Exception as e:
-        logger.error(f"Error sending password reset email: {str(e)}")
+        logger.error(f"Error sending password reset email: {e!s}")
         return {"status": "error", "reason": str(e)}
 
 
@@ -94,9 +93,9 @@ def send_email_verification(user_id, verification_link):
         html_message = render_to_string("emails/email_verification.html", context)
         plain_message = f"""
         Hi {user.get_full_name()},
-        
+
         Click here to verify your email: {verification_link}
-        
+
         Best regards,
         Elite Notes Team
         """
@@ -114,7 +113,7 @@ def send_email_verification(user_id, verification_link):
         return {"status": "success", "email": user.email}
 
     except Exception as e:
-        logger.error(f"Error sending verification email: {str(e)}")
+        logger.error(f"Error sending verification email: {e!s}")
         return {"status": "error", "reason": str(e)}
 
 
@@ -150,7 +149,7 @@ def create_note_version_snapshot(note_id, change_description=""):
         logger.error(f"Note {note_id} not found for version creation")
         return {"status": "error", "reason": "note_not_found"}
     except Exception as e:
-        logger.error(f"Error creating note version: {str(e)}")
+        logger.error(f"Error creating note version: {e!s}")
         return {"status": "error", "reason": str(e)}
 
 
@@ -184,7 +183,7 @@ def cleanup_expired_trash():
         return {"status": "success", "deleted": count}
 
     except Exception as e:
-        logger.error(f"Error cleaning up trash: {str(e)}")
+        logger.error(f"Error cleaning up trash: {e!s}")
         return {"status": "error", "reason": str(e)}
 
 
@@ -206,5 +205,5 @@ def cleanup_expired_password_reset_tokens():
         return {"status": "success", "deleted": count}
 
     except Exception as e:
-        logger.error(f"Error cleaning up password reset tokens: {str(e)}")
+        logger.error(f"Error cleaning up password reset tokens: {e!s}")
         return {"status": "error", "reason": str(e)}

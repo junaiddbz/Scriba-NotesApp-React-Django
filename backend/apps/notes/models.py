@@ -1,4 +1,5 @@
 from django.db import models
+
 from apps.auth.models import CustomUser
 
 

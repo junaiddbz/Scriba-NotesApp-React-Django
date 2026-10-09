@@ -1,6 +1,6 @@
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import SimpleRouter
-from rest_framework_simplejwt.views import TokenRefreshView
+
 from .views import AuthViewSet, CustomTokenObtainPairView, CustomTokenRefreshView
 
 app_name = "auth"

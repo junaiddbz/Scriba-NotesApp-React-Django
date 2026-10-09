@@ -1,15 +1,15 @@
-import os
-import django
-from django.conf import settings
+import os  # noqa: E402
+
+import django  # noqa: E402
 
 # Configure Django settings
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
 
-import pytest
-from django.contrib.auth import get_user_model
-from rest_framework.test import APIClient
-from apps.notes.models import Workspace
+import pytest  # noqa: E402
+from apps.notes.models import Workspace  # noqa: E402
+from django.contrib.auth import get_user_model  # noqa: E402
+from rest_framework.test import APIClient  # noqa: E402
 
 User = get_user_model()
 
@@ -35,7 +35,7 @@ def user(db):
 @pytest.fixture
 def authenticated_client(api_client, user):
     """Fixture for authenticated API client."""
-    from rest_framework_simplejwt.tokens import RefreshToken
+    from rest_framework_simplejwt.tokens import RefreshToken  # noqa: E402
 
     refresh = RefreshToken.for_user(user)
     api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")

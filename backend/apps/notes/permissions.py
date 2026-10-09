@@ -1,4 +1,5 @@
 from rest_framework.permissions import BasePermission
+
 from apps.sharing.models import NoteShare, PermissionChoices
 
 
@@ -28,20 +29,24 @@ class IsNoteOwner(BasePermission):
         if not share and not workspace_share:
             return False
 
-        # Determine the effective permission (workspace permission can override note permission or vice versa)
+        # Determine the effective permission (workspace permission can override note permission or vice versa)  # noqa: E501
         effective_permission = PermissionChoices.VIEWER
-        if share and share.permission_level == PermissionChoices.ADMIN:
-            effective_permission = PermissionChoices.ADMIN
-        elif (
-            workspace_share
-            and workspace_share.permission_level == PermissionChoices.ADMIN
+        if (
+            share
+            and share.permission_level == PermissionChoices.ADMIN
+            or (
+                workspace_share
+                and workspace_share.permission_level == PermissionChoices.ADMIN
+            )
         ):
             effective_permission = PermissionChoices.ADMIN
-        elif share and share.permission_level == PermissionChoices.EDITOR:
-            effective_permission = PermissionChoices.EDITOR
         elif (
-            workspace_share
-            and workspace_share.permission_level == PermissionChoices.EDITOR
+            share
+            and share.permission_level == PermissionChoices.EDITOR
+            or (
+                workspace_share
+                and workspace_share.permission_level == PermissionChoices.EDITOR
+            )
         ):
             effective_permission = PermissionChoices.EDITOR
 
@@ -73,8 +78,7 @@ class IsWorkspaceOwner(BasePermission):
             return True
 
         # Avoid circular import by inline import
-        from apps.sharing.models import WorkspaceShare
-        from apps.sharing.models import PermissionChoices
+        from apps.sharing.models import PermissionChoices, WorkspaceShare
 
         share = WorkspaceShare.objects.filter(
             workspace=obj, shared_with=request.user, is_active=True
