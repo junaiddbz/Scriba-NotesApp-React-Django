@@ -64,7 +64,7 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost/testdb
           CELERY_BROKER_URL: redis://localhost:6379/0
           SECRET_KEY: test-secret-key
-          DEBUG: False
+          DEBUG: True
         run: |
           pytest --cov=apps --cov=config --cov-report=xml --cov-report=html tests/
 
