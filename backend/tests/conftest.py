@@ -7,9 +7,10 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
 
 import pytest  # noqa: E402
-from apps.notes.models import Workspace  # noqa: E402
 from django.contrib.auth import get_user_model  # noqa: E402
 from rest_framework.test import APIClient  # noqa: E402
+
+from apps.notes.models import Workspace  # noqa: E402
 
 User = get_user_model()
 

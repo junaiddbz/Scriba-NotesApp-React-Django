@@ -1,10 +1,11 @@
+from django.contrib import admin
+
 from apps.sharing.models import (
     CollaborativeEdit,
     NoteShare,
     UserOAuthProvider,
     WorkspaceShare,
 )
-from django.contrib import admin
 
 
 @admin.register(NoteShare)

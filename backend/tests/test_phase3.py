@@ -1,6 +1,11 @@
 from datetime import timedelta
 
 import pytest
+from django.test import TestCase
+from django.utils import timezone
+from rest_framework import status
+from rest_framework.test import APIClient
+
 from apps.auth.models import CustomUser
 from apps.notes.models import Note, Workspace
 from apps.sharing.models import (
@@ -9,10 +14,6 @@ from apps.sharing.models import (
     UserOAuthProvider,
     WorkspaceShare,
 )
-from django.test import TestCase
-from django.utils import timezone
-from rest_framework import status
-from rest_framework.test import APIClient
 
 
 @pytest.mark.django_db

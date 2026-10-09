@@ -2,20 +2,21 @@ from datetime import timedelta
 from unittest.mock import patch
 
 import pytest
+from celery.result import EagerResult
+from django.test import TestCase
+from django.utils import timezone
+from rest_framework import status
+from rest_framework.test import APIClient
+
 from apps.auth.models import CustomUser, PasswordResetToken
 from apps.notes.models import MediaAttachment, Note, Workspace
 from apps.trash.models import TrashBin
-from celery.result import EagerResult
 from config.tasks import (
     cleanup_expired_password_reset_tokens,
     cleanup_expired_trash,
     send_email_verification,
     send_password_reset_email,
 )
-from django.test import TestCase
-from django.utils import timezone
-from rest_framework import status
-from rest_framework.test import APIClient
 
 
 @pytest.mark.django_db

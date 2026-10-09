@@ -1,5 +1,6 @@
-from apps.notes.models import Workspace
 from rest_framework import serializers
+
+from apps.notes.models import Workspace
 
 
 class WorkspaceSerializer(serializers.ModelSerializer):

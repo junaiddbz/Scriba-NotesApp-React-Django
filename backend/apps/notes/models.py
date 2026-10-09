@@ -1,5 +1,6 @@
-from apps.auth.models import CustomUser
 from django.db import models
+
+from apps.auth.models import CustomUser
 
 
 class Workspace(models.Model):

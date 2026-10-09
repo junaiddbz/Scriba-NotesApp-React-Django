@@ -1,7 +1,8 @@
-from apps.notes.models import Note, Workspace
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.utils import timezone
+
+from apps.notes.models import Note, Workspace
 
 User = get_user_model()
 

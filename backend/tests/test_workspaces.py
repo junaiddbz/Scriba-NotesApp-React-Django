@@ -1,5 +1,6 @@
-from apps.notes.models import Note, Workspace
 from rest_framework import status
+
+from apps.notes.models import Note, Workspace
 
 
 class TestWorkspaceCRUD:

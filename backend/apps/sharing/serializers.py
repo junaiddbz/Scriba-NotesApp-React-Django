@@ -1,10 +1,11 @@
+from rest_framework import serializers  # noqa: E402
+
 from apps.auth.models import CustomUser  # noqa: E402
 from apps.sharing.models import (  # noqa: E402
     NoteShare,
     UserOAuthProvider,
     WorkspaceShare,
 )
-from rest_framework import serializers  # noqa: E402
 
 
 class UserSerializer(serializers.ModelSerializer):

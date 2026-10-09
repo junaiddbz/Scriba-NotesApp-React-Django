@@ -1,5 +1,3 @@
-from apps.trash.models import TrashBin
-from config.tasks import create_note_version_snapshot
 from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
@@ -7,6 +5,9 @@ from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
+from apps.trash.models import TrashBin
+from config.tasks import create_note_version_snapshot
 from shared.s3_service import S3Service
 
 from .filters import NoteFilter

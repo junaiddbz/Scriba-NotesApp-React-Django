@@ -1,13 +1,14 @@
 import logging
 
-from apps.auth.models import CustomUser, PasswordResetToken
-from apps.notes.models import Note, NoteVersion
-from apps.trash.models import TrashBin
 from celery import shared_task
 from django.conf import settings
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils import timezone
+
+from apps.auth.models import CustomUser, PasswordResetToken
+from apps.notes.models import Note, NoteVersion
+from apps.trash.models import TrashBin
 
 logger = logging.getLogger(__name__)
 
