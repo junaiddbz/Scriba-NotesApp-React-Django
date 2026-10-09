@@ -3,7 +3,7 @@ import django
 from django.conf import settings
 
 # Configure Django settings
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
 
 import pytest
@@ -24,11 +24,11 @@ def api_client():
 def user(db):
     """Fixture for creating a test user."""
     return User.objects.create_user(
-        email='test@example.com',
-        username='testuser',
-        password='testpass123',
-        first_name='Test',
-        last_name='User'
+        email="test@example.com",
+        username="testuser",
+        password="testpass123",
+        first_name="Test",
+        last_name="User",
     )
 
 
@@ -36,9 +36,9 @@ def user(db):
 def authenticated_client(api_client, user):
     """Fixture for authenticated API client."""
     from rest_framework_simplejwt.tokens import RefreshToken
-    
+
     refresh = RefreshToken.for_user(user)
-    api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
+    api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
     return api_client
 
 
@@ -46,7 +46,5 @@ def authenticated_client(api_client, user):
 def workspace(db, user):
     """Fixture for creating a test workspace."""
     return Workspace.objects.create(
-        user=user,
-        name='Test Workspace',
-        description='A test workspace'
+        user=user, name="Test Workspace", description="A test workspace"
     )

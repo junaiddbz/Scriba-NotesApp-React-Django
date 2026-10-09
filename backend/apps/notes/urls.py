@@ -2,11 +2,11 @@ from django.urls import path, include
 from rest_framework.routers import SimpleRouter
 from .views import NoteViewSet
 
-app_name = 'notes'
+app_name = "notes"
 
 router = SimpleRouter()
-router.register(r'', NoteViewSet, basename='note')
+router.register(r"", NoteViewSet, basename="note")
 
 urlpatterns = [
-    path('', include(router.urls)),
+    path("", include(router.urls)),
 ]

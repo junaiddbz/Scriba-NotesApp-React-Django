@@ -8,8 +8,12 @@ from django.db.models import Q
 
 from .models import Note, NoteVersion, MediaAttachment, NoteLink, Workspace
 from .serializers import (
-    NoteListSerializer, NoteDetailSerializer, NoteCreateUpdateSerializer,
-    NoteVersionSerializer, MediaAttachmentSerializer, NoteLinkSerializer
+    NoteListSerializer,
+    NoteDetailSerializer,
+    NoteCreateUpdateSerializer,
+    NoteVersionSerializer,
+    MediaAttachmentSerializer,
+    NoteLinkSerializer,
 )
 from .permissions import IsNoteOwner
 from .filters import NoteFilter
@@ -23,84 +27,112 @@ class NoteViewSet(viewsets.ModelViewSet):
     ViewSet for Note CRUD operations.
     Supports autosave (PATCH), versioning, and searching.
     """
+
     permission_classes = [IsAuthenticated, IsNoteOwner]
     filterset_class = NoteFilter
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    search_fields = ['title', 'body']
-    ordering_fields = ['created_at', 'updated_at']
-    ordering = ['-updated_at']
-    
+    search_fields = ["title", "body"]
+    ordering_fields = ["created_at", "updated_at"]
+    ordering = ["-updated_at"]
+
     def get_queryset(self):
         """Only show notes belonging to the authenticated user or shared with them (directly or via workspace)."""
         qs = Note.objects.filter(
-            Q(user=self.request.user) |
-            Q(shares__shared_with=self.request.user, shares__is_active=True) |
-            Q(workspace__shares__shared_with=self.request.user, workspace__shares__is_active=True)
+            Q(user=self.request.user)
+            | Q(shares__shared_with=self.request.user, shares__is_active=True)
+            | Q(
+                workspace__shares__shared_with=self.request.user,
+                workspace__shares__is_active=True,
+            )
         ).distinct()
-        if getattr(self, 'action', '') != 'restore':
+        if getattr(self, "action", "") != "restore":
             qs = qs.filter(is_deleted=False)
         return qs
-    
+
     def get_serializer_class(self):
         """Use different serializers for list vs detail views."""
-        if self.action == 'list':
+        if self.action == "list":
             return NoteListSerializer
-        elif self.action in ['create', 'partial_update', 'update']:
+        elif self.action in ["create", "partial_update", "update"]:
             return NoteCreateUpdateSerializer
         return NoteDetailSerializer
-    
+
     def perform_create(self, serializer):
         """Set the current user as the note owner."""
         note = serializer.save(user=self.request.user, last_edited_by=self.request.user)
         from apps.notes.models import WorkspaceActivity
+
         if note.workspace:
-            WorkspaceActivity.log(note.workspace, self.request.user, 'Created a note', {'title': note.title, 'note_id': note.id})
-    
+            WorkspaceActivity.log(
+                note.workspace,
+                self.request.user,
+                "Created a note",
+                {"title": note.title, "note_id": note.id},
+            )
+
     def perform_update(self, serializer):
         """Track who last edited the note and trigger version snapshot."""
         old_note = self.get_object()
         old_title = old_note.title
-        
+
         # Check if we are ONLY updating 'is_favorite'
         validated_keys = set(serializer.validated_data.keys())
-        if validated_keys == {'is_favorite'}:
+        if validated_keys == {"is_favorite"}:
             # Use .update() to bypass auto_now=True on updated_at
             Note.objects.filter(id=serializer.instance.id).update(
-                is_favorite=serializer.validated_data['is_favorite']
+                is_favorite=serializer.validated_data["is_favorite"]
             )
             serializer.instance.refresh_from_db()
             return
-            
+
         note = serializer.save(last_edited_by=self.request.user)
-        
+
         from apps.notes.models import WorkspaceActivity
+
         if note.workspace:
             if old_title != note.title:
-                WorkspaceActivity.log(note.workspace, self.request.user, 'Changed note title', {'old': old_title, 'new': note.title, 'note_id': note.id})
-            elif 'body' in validated_keys:
-                WorkspaceActivity.log(note.workspace, self.request.user, 'Edited a note', {'title': note.title, 'note_id': note.id})
-        
+                WorkspaceActivity.log(
+                    note.workspace,
+                    self.request.user,
+                    "Changed note title",
+                    {"old": old_title, "new": note.title, "note_id": note.id},
+                )
+            elif "body" in validated_keys:
+                WorkspaceActivity.log(
+                    note.workspace,
+                    self.request.user,
+                    "Edited a note",
+                    {"title": note.title, "note_id": note.id},
+                )
+
         # Create version snapshot synchronously (no Celery broker needed)
         try:
-            create_note_version_snapshot(note_id=note.id, change_description='Note updated')
+            create_note_version_snapshot(
+                note_id=note.id, change_description="Note updated"
+            )
         except Exception as e:
             # Log the error but don't fail the update request
-            print(f'Error creating version snapshot: {str(e)}')
+            print(f"Error creating version snapshot: {str(e)}")
 
-    
     def perform_destroy(self, instance):
         """Soft delete: set is_deleted=True and create TrashBin entry."""
         instance.is_deleted = True
         instance.save()
-        
+
         from apps.notes.models import WorkspaceActivity
+
         if instance.workspace:
-            WorkspaceActivity.log(instance.workspace, self.request.user, 'Deleted a note', {'title': instance.title, 'note_id': instance.id})
-        
+            WorkspaceActivity.log(
+                instance.workspace,
+                self.request.user,
+                "Deleted a note",
+                {"title": instance.title, "note_id": instance.id},
+            )
+
         # Create trash bin entry so note appears in trash
         TrashBin.create_from_note(instance, self.request.user)
-    
-    @action(detail=True, methods=['post'])
+
+    @action(detail=True, methods=["post"])
     def restore(self, request, pk=None):
         """
         Restore a soft-deleted note.
@@ -109,17 +141,15 @@ class NoteViewSet(viewsets.ModelViewSet):
         note = self.get_object()
         if not note.is_deleted:
             return Response(
-                {'detail': 'Note is not deleted.'},
-                status=status.HTTP_400_BAD_REQUEST
+                {"detail": "Note is not deleted."}, status=status.HTTP_400_BAD_REQUEST
             )
         note.is_deleted = False
         note.save()
         return Response(
-            {'message': 'Note restored successfully.'},
-            status=status.HTTP_200_OK
+            {"message": "Note restored successfully."}, status=status.HTTP_200_OK
         )
-    
-    @action(detail=True, methods=['get'])
+
+    @action(detail=True, methods=["get"])
     def versions(self, request, pk=None):
         """
         Get version history for a note.
@@ -129,8 +159,12 @@ class NoteViewSet(viewsets.ModelViewSet):
         versions = note.versions.all()
         serializer = NoteVersionSerializer(versions, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
-    @action(detail=True, methods=['post'], url_path='versions/(?P<version_id>[0-9]+)/restore')
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="versions/(?P<version_id>[0-9]+)/restore",
+    )
     def restore_version(self, request, pk=None, version_id=None):
         """
         Restore a note to a specific previous version.
@@ -141,31 +175,30 @@ class NoteViewSet(viewsets.ModelViewSet):
             version = note.versions.get(id=version_id)
         except NoteVersion.DoesNotExist:
             return Response(
-                {'detail': 'Version not found.'},
-                status=status.HTTP_404_NOT_FOUND
+                {"detail": "Version not found."}, status=status.HTTP_404_NOT_FOUND
             )
-        
+
         # Create new version from old version
         note.content = version.content_snapshot
         note.last_edited_by = request.user
         note.save()
-        
+
         # Create new version record
         new_version_number = note.versions.count() + 1
         NoteVersion.objects.create(
             note=note,
             content_snapshot=version.content_snapshot,
             editor=request.user,
-            change_description=f'Restored from v{version.version_number}',
-            version_number=new_version_number
+            change_description=f"Restored from v{version.version_number}",
+            version_number=new_version_number,
         )
-        
+
         return Response(
-            {'message': f'Note restored to version {version.version_number}.'},
-            status=status.HTTP_200_OK
+            {"message": f"Note restored to version {version.version_number}."},
+            status=status.HTTP_200_OK,
         )
-    
-    @action(detail=True, methods=['get', 'post'])
+
+    @action(detail=True, methods=["get", "post"])
     def attachments(self, request, pk=None):
         """
         Get or upload attachments (images, files).
@@ -173,21 +206,21 @@ class NoteViewSet(viewsets.ModelViewSet):
         POST /api/v1/notes/{id}/attachments/  (with presigned URL)
         """
         note = self.get_object()
-        
-        if request.method == 'GET':
+
+        if request.method == "GET":
             attachments = note.attachments.all()
             serializer = MediaAttachmentSerializer(attachments, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
-        
-        if request.method == 'POST':
+
+        if request.method == "POST":
             # TODO: Generate presigned S3 URL
             serializer = MediaAttachmentSerializer(data=request.data)
             if serializer.is_valid():
                 serializer.save(note=note, uploader=request.user)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    @action(detail=True, methods=['get', 'post'])
+
+    @action(detail=True, methods=["get", "post"])
     def links(self, request, pk=None):
         """
         Get bidirectional links (backlinks) or create new links.
@@ -195,68 +228,71 @@ class NoteViewSet(viewsets.ModelViewSet):
         POST /api/v1/notes/{id}/links/ (Create link to another note)
         """
         note = self.get_object()
-        
-        if request.method == 'GET':
+
+        if request.method == "GET":
             # Get both outgoing and incoming links
             outgoing = note.outgoing_links.all()
             incoming = note.incoming_links.all()
-            
+
             outgoing_serializer = NoteLinkSerializer(outgoing, many=True)
             incoming_serializer = NoteLinkSerializer(incoming, many=True)
-            
-            return Response({
-                'outgoing': outgoing_serializer.data,
-                'incoming': incoming_serializer.data,
-            }, status=status.HTTP_200_OK)
-        
-        if request.method == 'POST':
-            target_note_id = request.data.get('target_note_id')
-            link_type = request.data.get('link_type', 'references')
-            
+
+            return Response(
+                {
+                    "outgoing": outgoing_serializer.data,
+                    "incoming": incoming_serializer.data,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        if request.method == "POST":
+            target_note_id = request.data.get("target_note_id")
+            link_type = request.data.get("link_type", "references")
+
             if not target_note_id:
                 return Response(
-                    {'detail': 'target_note_id is required.'},
-                    status=status.HTTP_400_BAD_REQUEST
+                    {"detail": "target_note_id is required."},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
-            
+
             try:
                 target_note = Note.objects.get(id=target_note_id, user=request.user)
             except Note.DoesNotExist:
                 return Response(
-                    {'detail': 'Target note not found.'},
-                    status=status.HTTP_404_NOT_FOUND
+                    {"detail": "Target note not found."},
+                    status=status.HTTP_404_NOT_FOUND,
                 )
-            
+
             if note.id == target_note.id:
                 return Response(
-                    {'detail': 'Cannot link a note to itself.'},
-                    status=status.HTTP_400_BAD_REQUEST
+                    {"detail": "Cannot link a note to itself."},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
-            
+
             link, created = NoteLink.objects.get_or_create(
                 source_note=note,
                 target_note=target_note,
-                defaults={'link_type': link_type}
+                defaults={"link_type": link_type},
             )
-            
+
             serializer = NoteLinkSerializer(link)
             return Response(
                 serializer.data,
-                status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
+                status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
             )
-    
-    @action(detail=True, methods=['post'])
+
+    @action(detail=True, methods=["post"])
     def presigned_url(self, request, pk=None):
         """
         Generate presigned S3 URL for direct browser upload.
         POST /api/v1/notes/{id}/presigned-url/
-        
+
         Request body:
         {
             "file_name": "image.png",
             "file_type": "image/png"
         }
-        
+
         Response:
         {
             "upload_url": "https://s3.amazonaws.com/...",
@@ -265,44 +301,46 @@ class NoteViewSet(viewsets.ModelViewSet):
         }
         """
         note = self.get_object()
-        
-        file_name = request.data.get('file_name')
-        file_type = request.data.get('file_type')
-        
+
+        file_name = request.data.get("file_name")
+        file_type = request.data.get("file_type")
+
         if not file_name or not file_type:
             return Response(
-                {'detail': 'file_name and file_type are required.'},
-                status=status.HTTP_400_BAD_REQUEST
+                {"detail": "file_name and file_type are required."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
-        
+
         try:
             s3_service = S3Service()
             presigned_data = s3_service.generate_presigned_upload_url(
-                file_name=file_name,
-                file_type=file_type
+                file_name=file_name, file_type=file_type
             )
-            
+
             # Store S3 key in MediaAttachment for later retrieval
             attachment = MediaAttachment.objects.create(
                 note=note,
                 uploader=request.user,
-                s3_url=presigned_data['s3_key'],
-                original_filename=file_name
+                s3_url=presigned_data["s3_key"],
+                original_filename=file_name,
             )
-            
-            return Response({
-                'upload_url': presigned_data['url'],
-                's3_key': presigned_data['s3_key'],
-                'max_file_size': 10 * 1024 * 1024,  # 10MB
-                'attachment_id': attachment.id
-            }, status=status.HTTP_200_OK)
+
+            return Response(
+                {
+                    "upload_url": presigned_data["url"],
+                    "s3_key": presigned_data["s3_key"],
+                    "max_file_size": 10 * 1024 * 1024,  # 10MB
+                    "attachment_id": attachment.id,
+                },
+                status=status.HTTP_200_OK,
+            )
         except Exception as e:
             return Response(
-                {'detail': f'Failed to generate presigned URL: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"detail": f"Failed to generate presigned URL: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-    
-    @action(detail=False, methods=['post'], url_path='reorder')
+
+    @action(detail=False, methods=["post"], url_path="reorder")
     def reorder(self, request):
         """
         Update the custom sort order of notes.
@@ -311,23 +349,30 @@ class NoteViewSet(viewsets.ModelViewSet):
             "ordered_ids": [5, 2, 8, 1]
         }
         """
-        ordered_ids = request.data.get('ordered_ids', [])
+        ordered_ids = request.data.get("ordered_ids", [])
         if not isinstance(ordered_ids, list):
-            return Response({'detail': 'ordered_ids must be a list'}, status=status.HTTP_400_BAD_REQUEST)
-            
+            return Response(
+                {"detail": "ordered_ids must be a list"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # Total count to reverse the index (highest index appears first)
         total = len(ordered_ids)
-        
+
         # We could use bulk_update, but for < 1000 items, sequential updates are fine
         # and bypass auto_now=True on updated_at
         for idx, note_id in enumerate(ordered_ids):
             Note.objects.filter(id=note_id, user=request.user).update(
                 custom_sort_index=total - idx
             )
-            
-        return Response({'message': 'Notes reordered successfully.'}, status=status.HTTP_200_OK)
-    
-    @action(detail=True, methods=['delete'], url_path='links/(?P<target_note_id>[0-9]+)')
+
+        return Response(
+            {"message": "Notes reordered successfully."}, status=status.HTTP_200_OK
+        )
+
+    @action(
+        detail=True, methods=["delete"], url_path="links/(?P<target_note_id>[0-9]+)"
+    )
     def delete_link(self, request, pk=None, target_note_id=None):
         """
         Delete a link between notes.
@@ -338,11 +383,9 @@ class NoteViewSet(viewsets.ModelViewSet):
             link = NoteLink.objects.get(source_note=note, target_note_id=target_note_id)
             link.delete()
             return Response(
-                {'message': 'Link deleted successfully.'},
-                status=status.HTTP_200_OK
+                {"message": "Link deleted successfully."}, status=status.HTTP_200_OK
             )
         except NoteLink.DoesNotExist:
             return Response(
-                {'detail': 'Link not found.'},
-                status=status.HTTP_404_NOT_FOUND
+                {"detail": "Link not found."}, status=status.HTTP_404_NOT_FOUND
             )

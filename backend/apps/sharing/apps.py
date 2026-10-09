@@ -2,6 +2,6 @@ from django.apps import AppConfig
 
 
 class SharingConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'apps.sharing'
-    verbose_name = 'Note Sharing & Collaboration'
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "apps.sharing"
+    verbose_name = "Note Sharing & Collaboration"
