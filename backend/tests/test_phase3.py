@@ -53,7 +53,7 @@ class TestNoteSharing(TestCase):
             "/api/v1/note-shares/",
             {
                 "note": self.note.id,
-                "shared_with": self.editor.id,
+                "shared_with_email": self.editor.email,
                 "permission_level": PermissionChoices.EDITOR,
             },
             format="json",
@@ -72,7 +72,7 @@ class TestNoteSharing(TestCase):
             "/api/v1/note-shares/",
             {
                 "note": self.note.id,
-                "shared_with": self.owner.id,
+                "shared_with_email": self.owner.email,
                 "permission_level": PermissionChoices.EDITOR,
             },
             format="json",
@@ -134,7 +134,7 @@ class TestNoteSharing(TestCase):
 
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 1
-        assert response.data[0]["note"] == self.note.id
+        assert response.data[0]["note"]["id"] == self.note.id
 
     def test_shared_by_me_endpoint(self):
         """Test getting notes shared by current user."""
@@ -223,7 +223,7 @@ class TestWorkspaceSharing(TestCase):
             "/api/v1/workspace-shares/",
             {
                 "workspace": self.workspace.id,
-                "shared_with": self.collaborator.id,
+                "shared_with_email": self.collaborator.email,
                 "permission_level": PermissionChoices.EDITOR,
             },
             format="json",
@@ -246,7 +246,7 @@ class TestWorkspaceSharing(TestCase):
             "/api/v1/workspace-shares/",
             {
                 "workspace": other_workspace.id,
-                "shared_with": self.collaborator.id,
+                "shared_with_email": self.collaborator.email,
                 "permission_level": PermissionChoices.EDITOR,
             },
             format="json",
@@ -361,7 +361,7 @@ class TestPhase3Integration(TestCase):
             "/api/v1/workspace-shares/",
             {
                 "workspace": self.workspace.id,
-                "shared_with": self.collaborator.id,
+                "shared_with_email": self.collaborator.email,
                 "permission_level": PermissionChoices.EDITOR,
             },
             format="json",
@@ -373,7 +373,7 @@ class TestPhase3Integration(TestCase):
             "/api/v1/note-shares/",
             {
                 "note": self.note.id,
-                "shared_with": self.collaborator.id,
+                "shared_with_email": self.collaborator.email,
                 "permission_level": PermissionChoices.ADMIN,
             },
             format="json",
