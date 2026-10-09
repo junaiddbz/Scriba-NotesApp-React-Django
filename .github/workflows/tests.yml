@@ -103,7 +103,7 @@ jobs:
 
       - name: Run isort import sorter check
         working-directory: ./backend
-        run: isort --check-only .
+        run: isort --check-only --profile black .
 
   security:
     runs-on: ubuntu-latest
