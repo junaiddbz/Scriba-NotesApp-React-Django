@@ -1,6 +1,5 @@
-from rest_framework.permissions import BasePermission
-
 from apps.sharing.models import NoteShare, WorkspaceShare
+from rest_framework.permissions import BasePermission
 
 
 class IsNoteOwnerOrSharedWith(BasePermission):

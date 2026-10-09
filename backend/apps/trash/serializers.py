@@ -1,6 +1,5 @@
-from rest_framework import serializers
-
 from apps.notes.models import Note
+from rest_framework import serializers
 
 from .models import TrashBin
 

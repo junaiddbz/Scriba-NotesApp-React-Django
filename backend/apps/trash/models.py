@@ -1,10 +1,9 @@
 from datetime import timedelta
 
-from django.db import models
-from django.utils import timezone
-
 from apps.auth.models import CustomUser
 from apps.notes.models import Note
+from django.db import models
+from django.utils import timezone
 
 
 class TrashBin(models.Model):

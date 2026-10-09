@@ -1,11 +1,3 @@
-from django.db.models import Q
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import serializers, status, viewsets
-from rest_framework.decorators import action
-from rest_framework.filters import OrderingFilter, SearchFilter
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-
 from apps.notes.models import Note, Workspace
 from apps.sharing.models import (
     NoteShare,
@@ -20,6 +12,13 @@ from apps.sharing.serializers import (
     WorkspaceShareListSerializer,
     WorkspaceShareSerializer,
 )
+from django.db.models import Q
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import serializers, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 
 class NoteShareViewSet(viewsets.ModelViewSet):
