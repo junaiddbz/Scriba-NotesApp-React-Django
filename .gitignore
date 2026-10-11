@@ -1,82 +1,163 @@
-# OS generated files
+# ==============================================================================
+# Git Ignore Configuration - Scriba Notes App
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Operating System Files
+# ------------------------------------------------------------------------------
 .DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
-ehthumbs.db
+.AppleDouble
+.LSOverride
 Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
 
-# IDE / Editor
-.vscode/
+# ------------------------------------------------------------------------------
+# IDE & Code Editors
+# ------------------------------------------------------------------------------
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 .idea/
 *.swp
 *.swo
 *~
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+.project
+.pydevproject
+.settings/
 
-# Python / Django
+# ------------------------------------------------------------------------------
+# Environment Variables & Sensitive Credentials (NEVER COMMIT)
+# ------------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# SSH Keys, SSL Certificates & Secrets
+*.key
+*.pem
+*.crt
+*.cert
+*.pfx
+*.p12
+ssl/
+certs/
+
+# ------------------------------------------------------------------------------
+# Python & Django
+# ------------------------------------------------------------------------------
+# Bytecode & Caches
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-env/
+
+# Virtual Environments
 venv/
-.env
-.venv
+.venv/
+env/
 env.bak/
 venv.bak/
-pip-log.txt
-pip-delete-this-directory.txt
-db.sqlite3
-db.sqlite3-journal
-celerybeat-schedule
+ENV/
+
+# Databases
+*.sqlite3
+*.sqlite3-journal
+*.db
+
+# Celery Beat
+celerybeat-schedule*
 celerybeat.pid
 
-# Pytest / Coverage
-.pytest_cache/
-htmlcov/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.log
+# Django Collected Static & Media Uploads
+staticfiles/
+backend/staticfiles/
+media/
+backend/media/
 
-# Frontend (Node / React)
-node_modules/
-npm-debug.log
-yarn-error.log
-yarn-debug.log
-.pnp
-.pnp.js
-build/
-dist/
-.next/
-out/
-.nuxt
-.vuepress/dist
-
-# Environment Variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Logs
-logs/
-*.log
-backend/logs/
-
-# Build artifacts
+# Distribution / Packaging
+pip-log.txt
+pip-delete-this-directory.txt
 *.egg-info/
 .installed.cfg
 *.egg
 MANIFEST
 
-# Other
-coverage/
-cypress/videos/
-cypress/screenshots/
+# ------------------------------------------------------------------------------
+# Testing, Linting & Coverage
+# ------------------------------------------------------------------------------
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.hypothesis/
+.cache/
+nosetests.xml
+coverage.xml
+*.cover
+
+# ------------------------------------------------------------------------------
+# Frontend & Node.js
+# ------------------------------------------------------------------------------
+node_modules/
+frontend/node_modules/
+build/
+frontend/build/
+dist/
+out/
+.next/
+.nuxt/
+.vuepress/dist/
+
+# NPM / Yarn / PNPM Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.pnp
+.pnp.js
+
+# Frontend Caches
+.eslintcache
+.parcel-cache
+
+# ------------------------------------------------------------------------------
+# Logs & Temporary Files
+# ------------------------------------------------------------------------------
+*.log
+logs/
+backend/logs/
+frontend/logs/
+*.tmp
+*.temp
+
+# ------------------------------------------------------------------------------
+# Archives & Deployment Artifacts
+# ------------------------------------------------------------------------------
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.7z
+docker-compose.override.yml
+
+# ------------------------------------------------------------------------------
+# AI Agents & Local Metadata
+# ------------------------------------------------------------------------------
+.agents/
+skills-lock.json
+.neon/
+.neon

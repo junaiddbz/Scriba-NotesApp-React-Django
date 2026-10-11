@@ -211,8 +211,8 @@ AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY", default="")
 AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME", default="")
 AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default="us-east-1")
 
-# S3 is only actually used in production (when DEBUG=False)
-if not DEBUG or env("USE_S3", default=False):
+# S3 is only actually used in production if a bucket is specified
+if AWS_STORAGE_BUCKET_NAME and (not DEBUG or env("USE_S3", default=False)):
     AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
     AWS_DEFAULT_ACL = "public-read"
     AWS_S3_OBJECT_PARAMETERS = {"CacheControl": "max-age=86400"}
@@ -275,12 +275,12 @@ SPECTACULAR_SETTINGS = {
 # Security Settings (Production)
 # ========================================
 if not DEBUG:
-    SECURE_SSL_REDIRECT = True
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_HSTS_SECONDS = 31536000
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
+    SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=False)
+    SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=False)
+    CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=False)
+    # SECURE_HSTS_SECONDS = 31536000
+    # SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    # SECURE_HSTS_PRELOAD = True
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
